@@ -4,7 +4,7 @@ import {
 } from '@devhub/core'
 import {
   ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
-  UsageRepo, historico, migrate, tagsMaisUsadas,
+  TranslationsRepo, UsageRepo, historico, migrate, tagsMaisUsadas,
 } from '@devhub/db'
 import { ExpoSqliteDriver } from '@devhub/db/expo'
 import type { DevHubApi, FeedItem, SourceInfo } from '@devhub/state'
@@ -31,6 +31,7 @@ const tags = new TagsRepo(driver)
 const search = new SearchRepo(driver)
 const follows = new FollowsRepo(driver)
 const usage = new UsageRepo(driver)
+const translations = new TranslationsRepo(driver)
 
 const CHAVE_MODELO = 'ai_model'
 const CHAVE_NOTIF_PREFS = 'notificacoes'
@@ -72,6 +73,7 @@ function idsSalvos(): Set<string> {
 }
 
 function itemDoArtigo(article: Article, salvo: boolean): FeedItem {
+  const trad = translations.get(article.id, 'pt')
   const h = article.storyId
     ? driver.get<{
       id: string; canonical_title: string; canonical_summary: string | null
@@ -110,22 +112,39 @@ function itemDoArtigo(article: Article, salvo: boolean): FeedItem {
       freshness: 0, trust: 0, importance: 0, affinity: 1, dedupPenalty: 1, total: 0,
     },
     saved: salvo,
+    ...(trad ? {
+      traducao: {
+        title: trad.title, excerpt: trad.excerpt,
+        sourceLang: trad.sourceLang, model: trad.model,
+      },
+    } : {}),
   }
 }
 
 export const mobileApi: DevHubApi = {
   async feed(category, limit) {
     const salvos = idsSalvos()
-    return stories.topRanked(limit, category, Date.now())
+    const ranqueadas = stories.topRanked(limit, category, Date.now())
+    const trads = translations.paraArtigos(
+      ranqueadas.map((r) => r.primaryArticleId), 'pt',
+    )
+    return ranqueadas
       .map((r) => {
         const a = articles.byId(r.primaryArticleId)
         if (!a) return null
+        const t = trads.get(a.id)
         return {
           story: r.story,
           article: a,
           tags: tags.tagsFor(a.id),
           breakdown: r.breakdown,
           saved: salvos.has(a.id),
+          ...(t ? {
+            traducao: {
+              title: t.title, excerpt: t.excerpt,
+              sourceLang: t.sourceLang, model: t.model,
+            },
+          } : {}),
         }
       })
       .filter((x): x is FeedItem => x !== null)
@@ -152,7 +171,38 @@ export const mobileApi: DevHubApi = {
 
   async article(id) {
     const a = articles.byId(id)
-    return a ? { article: a, tags: tags.tagsFor(a.id) } : null
+    if (!a) return null
+    const t = translations.get(a.id, 'pt')
+    return {
+      article: a,
+      tags: tags.tagsFor(a.id),
+      ...(t ? {
+        traducao: {
+          title: t.title, excerpt: t.excerpt, sourceLang: t.sourceLang,
+          model: t.model, contentText: t.contentText,
+        },
+      } : {}),
+    }
+  },
+
+  async translateArticle(articleId) {
+    const a = articles.byId(articleId)
+    if (!a || a.lang === 'pt' || a.lang === 'desconhecido') return false
+    if (translations.temCorpo(articleId, 'pt')) return true
+
+    const { provider } = await providerAtual()
+    const t = await provider.translate({
+      id: a.id, title: a.title, excerpt: a.excerpt, contentText: a.contentText,
+      sourceTrust: 1, categoryHint: null, lang: a.lang,
+    })
+    if (!t) return false
+
+    translations.upsert({
+      articleId, targetLang: 'pt', sourceLang: a.lang,
+      title: t.title, excerpt: t.excerpt, contentText: t.contentText,
+      provider: t.provider, model: t.model, translatedAt: Date.now(),
+    })
+    return true
   },
 
   async toggleSaved(articleId) {
@@ -181,7 +231,7 @@ export const mobileApi: DevHubApi = {
     const { provider } = await providerAtual()
     const relatorio = await runIngest({
       platform: mobilePlatform,
-      sources, articles, stories, tags, search,
+      sources, articles, stories, tags, search, translations,
       ai: provider,
     })
     gravarConfig(CHAVE_ULTIMA_INGESTAO, String(Date.now()))
@@ -243,6 +293,8 @@ export const mobileApi: DevHubApi = {
       requisicoesHoje: usage.requisicoesHoje(agora),
       tetoDiario: governador?.tetoDiario ?? 0,
       tokensHoje: uso.reduce((s, u) => s + u.tokensEntrada + u.tokensSaida, 0),
+      aTraduzir: translations.pendentes('pt', 100_000).length,
+      traduzidos: translations.contar('pt'),
     }
   },
 

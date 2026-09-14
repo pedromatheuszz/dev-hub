@@ -1,7 +1,7 @@
 import { tokenize } from '../dedup/simhash.js'
 import { categoryOf, contentTypeOf, tagsOf } from '../taxonomy/classify.js'
 import type {
-  AIProvider, ArticleForAI, Classification, ModelInfo, Summary,
+  AIProvider, ArticleForAI, Classification, ModelInfo, Summary, Traducao,
 } from './provider.js'
 
 const MODELO = 'heuristic-v1'
@@ -77,6 +77,17 @@ export class HeuristicProvider implements AIProvider {
         isAiGenerated: true,
       }
     })
+  }
+
+  /**
+   * Não traduz, e diz isso devolvendo null.
+   *
+   * Traduzir de verdade exige um modelo de linguagem. Um dicionário
+   * palavra-a-palavra produziria texto ruim e, pior, daria ao usuário a
+   * impressão de que ele está lendo uma tradução confiável.
+   */
+  async translate(): Promise<Traducao | null> {
+    return null
   }
 
   async summarize(article: ArticleForAI, kind: 'short' | 'deep'): Promise<Summary> {

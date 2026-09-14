@@ -7,6 +7,7 @@ export * from './feeds/index.js'
 
 export * from './normalize/article.js'
 export * from './normalize/dates.js'
+export * from './normalize/language.js'
 export * from './normalize/html.js'
 export * from './normalize/urls.js'
 

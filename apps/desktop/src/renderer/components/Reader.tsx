@@ -1,16 +1,35 @@
 import type { Article } from '@devhub/core'
 import { useDevHub } from '@devhub/state'
 import { useEffect, useState } from 'react'
-import { api, hostDe, rotuloTipo, tempoRelativo } from '../api.js'
+import { api, hostDe, rotuloIdioma, rotuloTipo, tempoRelativo } from '../api.js'
 
 /**
  * Leitor de artigo. O conteúdo já vem sanitizado por allowlist desde a
  * ingestão (spec §9), então é seguro renderizá-lo — mas quando não há
  * corpo, mostramos o resumo e mandamos o leitor para a fonte original.
  */
+/** A tradução volta como texto puro; separamos em parágrafos para ler melhor. */
+function quebrarParagrafos(texto: string): string[] {
+  return texto
+    .split('\n')
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+}
+
+type DadosArtigo = {
+  article: Article
+  tags: string[]
+  traducao?: {
+    title: string; excerpt: string; sourceLang: string
+    model: string; contentText: string | null
+  }
+}
+
 export function Reader({ id }: { id: string }) {
-  const [dados, setDados] = useState<{ article: Article; tags: string[] } | null>(null)
+  const [dados, setDados] = useState<DadosArtigo | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [verOriginal, setVerOriginal] = useState(false)
+  const [traduzindo, setTraduzindo] = useState(false)
   const goBack = useDevHub((s) => s.goBack)
   const toggleSaved = useDevHub((s) => s.toggleSaved)
   const items = useDevHub((s) => s.items)
@@ -19,11 +38,26 @@ export function Reader({ id }: { id: string }) {
   useEffect(() => {
     let vivo = true
     setCarregando(true)
-    void api.article(id).then((d) => {
+    setVerOriginal(false)
+
+    void api.article(id).then(async (d) => {
       if (!vivo) return
-      setDados(d)
+      setDados(d as DadosArtigo | null)
       setCarregando(false)
-      if (d) void api.recordRead(id)
+      if (!d) return
+      void api.recordRead(id)
+
+      // O corpo completo é traduzido sob demanda, ao abrir: o lote de
+      // ingestão traduz só título e resumo, que é o que o feed mostra.
+      const precisa = d.article.lang !== 'pt' && d.article.lang !== 'desconhecido'
+      const jaTem = (d as DadosArtigo).traducao?.contentText != null
+      if (precisa && !jaTem) {
+        setTraduzindo(true)
+        const ok = await api.translateArticle(id)
+        if (!vivo) return
+        if (ok) setDados(await api.article(id) as DadosArtigo | null)
+        setTraduzindo(false)
+      }
     })
     return () => { vivo = false }
   }, [id])
@@ -42,8 +76,13 @@ export function Reader({ id }: { id: string }) {
     )
   }
 
-  const { article, tags } = dados
+  const { article, tags, traducao } = dados
   const temCorpo = (article.contentHtml ?? '').length > 200
+
+  const mostrandoTraducao = traducao !== undefined && !verOriginal
+  const titulo = mostrandoTraducao ? traducao.title : article.title
+  const resumo = mostrandoTraducao ? (traducao.excerpt || article.excerpt) : article.excerpt
+  const corpoTraduzido = mostrandoTraducao ? traducao.contentText : null
 
   return (
     <article className="reader">
@@ -51,7 +90,29 @@ export function Reader({ id }: { id: string }) {
         ← Voltar
       </button>
 
-      <h1>{article.title}</h1>
+      {traducao && (
+        <div className="aviso-traducao">
+          <span aria-hidden="true">⇄</span>
+          <span>
+            <strong>Tradução automática</strong> do {rotuloIdioma(traducao.sourceLang)}
+            {traducao.model ? ` por ${traducao.model}` : ''}. A fonte original
+            está em {rotuloIdioma(traducao.sourceLang)} — em caso de dúvida,
+            confira no site.
+          </span>
+          <button className="btn btn-ghost" onClick={() => setVerOriginal((v) => !v)}>
+            {verOriginal ? 'Ver tradução' : 'Ver original'}
+          </button>
+        </div>
+      )}
+
+      {!traducao && traduzindo && (
+        <div className="aviso-traducao">
+          <span className="spin" aria-hidden="true">◌</span>
+          <span>Traduzindo…</span>
+        </div>
+      )}
+
+      <h1>{titulo}</h1>
 
       <div className="reader-meta">
         <strong>{hostDe(article.url)}</strong>
@@ -85,17 +146,24 @@ export function Reader({ id }: { id: string }) {
         </div>
       )}
 
-      {article.excerpt && (
+      {resumo && (
         <div className="reader-summary">
           <div className="reader-summary-head">
             {/* Spec §6.5: conteúdo derivado automaticamente é sempre rotulado. */}
             <span className="chip chip-ai">Resumo do feed</span>
+            {mostrandoTraducao && <span className="chip chip-trad">⇄ Traduzido</span>}
           </div>
-          <p style={{ margin: 0 }}>{article.excerpt}</p>
+          <p style={{ margin: 0 }}>{resumo}</p>
         </div>
       )}
 
-      {temCorpo ? (
+      {corpoTraduzido ? (
+        // Tradução é texto puro, não HTML: nada a sanitizar, e nada de
+        // dangerouslySetInnerHTML com conteúdo vindo do modelo.
+        <div className="reader-body">
+          {quebrarParagrafos(corpoTraduzido).map((p, i) => <p key={i}>{p}</p>)}
+        </div>
+      ) : temCorpo ? (
         <div
           className="reader-body"
           // Sanitizado por allowlist na ingestão: script, style, atributos de

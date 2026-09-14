@@ -59,3 +59,12 @@ export function hostDe(url: string): string {
     return ''
   }
 }
+
+const ROTULO_IDIOMA: Record<string, string> = {
+  en: 'inglês', es: 'espanhol', pt: 'português',
+  fr: 'francês', de: 'alemão', it: 'italiano', ja: 'japonês',
+}
+
+export function rotuloIdioma(c: string): string {
+  return ROTULO_IDIOMA[c] ?? c
+}

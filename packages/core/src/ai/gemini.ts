@@ -3,7 +3,7 @@ import { TAG_DICTIONARY } from '../taxonomy/dictionary.js'
 import type { Category, ContentType } from '../types.js'
 import { HeuristicProvider } from './heuristic.js'
 import type {
-  AIProvider, ArticleForAI, Classification, ModelInfo, Summary,
+  AIProvider, ArticleForAI, Classification, ModelInfo, Summary, Traducao,
 } from './provider.js'
 import { GovernadorDeCota, atrasoBackoff, type LimitesCota } from './quota.js'
 
@@ -155,6 +155,31 @@ export class GeminiProvider implements AIProvider {
     return this.heuristico.classifyBatch(articles)
   }
 
+  /**
+   * Tradução completa, incluindo o corpo. Roda sob demanda quando o leitor
+   * abre o artigo — volume baixo, ao contrário do lote de classificação.
+   */
+  async translate(article: ArticleForAI): Promise<Traducao | null> {
+    try {
+      const texto = await this.gerar(promptDeTraducao(article), 4096)
+      const doc = JSON.parse(limparCercaDeCodigo(texto)) as {
+        titulo?: string; resumo?: string; texto?: string
+      }
+      if (!doc.titulo) return null
+
+      return {
+        title: doc.titulo,
+        excerpt: doc.resumo ?? '',
+        contentText: doc.texto ?? null,
+        provider: this.name,
+        model: this.o.model,
+      }
+    } catch (e) {
+      if (!(e instanceof SemCotaError)) this.o.logger.warn('tradução falhou', e)
+      return null
+    }
+  }
+
   async summarize(article: ArticleForAI, kind: 'short' | 'deep'): Promise<Summary> {
     try {
       const texto = await this.gerar(
@@ -216,6 +241,26 @@ ITENS:
 ${itens}`
 }
 
+function promptDeTraducao(a: ArticleForAI): string {
+  return `Traduza esta notícia de tecnologia para português do Brasil.
+
+Regras:
+- Traduza o sentido, não palavra a palavra. O texto tem que soar natural.
+- Mantenha em inglês nomes próprios e termos técnicos consagrados:
+  Rust, Kubernetes, borrow checker, pull request, deploy, commit, branch.
+- Não resuma, não comente, não acrescente nada que não esteja no original.
+
+Responda APENAS com JSON:
+{"titulo":"...","resumo":"...","texto":"..."}
+
+TÍTULO: ${a.title}
+
+RESUMO: ${a.excerpt}
+
+TEXTO:
+${a.contentText.slice(0, 8000)}`
+}
+
 function promptDeResumo(a: ArticleForAI, kind: 'short' | 'deep'): string {
   const frases = kind === 'deep' ? '4 a 6' : '2 a 3'
   return `Resuma esta notícia de tecnologia em português do Brasil, em ${frases} frases.
@@ -264,6 +309,12 @@ export function interpretarClassificacao(
       .slice(0, 8)
       .map((slug) => ({ slug, confidence: 0.9 }))
 
+    // Só aceita a tradução se vier completa e diferente do original —
+    // o modelo às vezes devolve o título em inglês de volta.
+    const tituloPt = typeof o['titulo_pt'] === 'string' ? o['titulo_pt'].trim() : ''
+    const resumoPt = typeof o['resumo_pt'] === 'string' ? o['resumo_pt'].trim() : ''
+    const traduziu = tituloPt.length > 0 && tituloPt !== artigo.title
+
     porIndice.set(i, {
       articleId: artigo.id,
       category: categoria,
@@ -272,6 +323,7 @@ export function interpretarClassificacao(
         ? Math.min(1, Math.max(0, importancia))
         : 0.5,
       tags,
+      ...(traduziu ? { translation: { title: tituloPt, excerpt: resumoPt } } : {}),
       isAiGenerated: true,
     })
   }

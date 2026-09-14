@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import {
   ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
-  UsageRepo, migrate,
+  TranslationsRepo, UsageRepo, migrate,
 } from '@devhub/db'
 import { SOURCES } from '@devhub/core'
 
@@ -17,6 +17,7 @@ export interface Contexto {
   search: SearchRepo
   follows: FollowsRepo
   usage: UsageRepo
+  translations: TranslationsRepo
 }
 
 let ctx: Contexto | null = null
@@ -46,6 +47,7 @@ export function abrirBanco(): Contexto {
     search: new SearchRepo(driver),
     follows: new FollowsRepo(driver),
     usage: new UsageRepo(driver),
+    translations: new TranslationsRepo(driver),
   }
   return ctx
 }

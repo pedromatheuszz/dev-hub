@@ -86,6 +86,39 @@ export function AiSettings() {
 
       <div className="setting-row">
         <div style={{ flex: 1 }}>
+          <div className="setting-label">Tradução automática</div>
+          <div className="setting-hint">
+            {usandoIA ? (
+              <>
+                As notícias em outro idioma são traduzidas para português junto
+                da classificação, sem requisição extra. O corpo completo é
+                traduzido quando você abre o artigo.
+                <br />
+                <strong>{estado.traduzidos.toLocaleString('pt-BR')}</strong> traduzidos
+                {estado.aTraduzir > 0 && (
+                  <> · <strong>{estado.aTraduzir.toLocaleString('pt-BR')}</strong> na fila
+                  (entram nas próximas ingestões)</>
+                )}
+              </>
+            ) : (
+              <>
+                <strong>Precisa da chave acima.</strong> Traduzir exige um modelo de
+                linguagem — não há como fazer isso localmente com qualidade, e um
+                dicionário palavra a palavra daria a impressão falsa de tradução
+                confiável. Sem a chave, os{' '}
+                {estado.aTraduzir.toLocaleString('pt-BR')} artigos em outro idioma
+                ficam no original.
+              </>
+            )}
+          </div>
+        </div>
+        <span className={`chip ${usandoIA ? 'chip-trad' : 'chip-type'}`}>
+          {usandoIA ? '⇄ ativa' : 'inativa'}
+        </span>
+      </div>
+
+      <div className="setting-row">
+        <div style={{ flex: 1 }}>
           <div className="setting-label">Chave da API do Gemini</div>
           <div className="setting-hint">
             Gere em <span className="mono">aistudio.google.com/apikey</span>. Fica cifrada

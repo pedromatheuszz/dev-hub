@@ -1,6 +1,6 @@
 import type { Article, Category } from '@devhub/core'
 import { historico, tagsMaisUsadas, type FollowKind } from '@devhub/db'
-import type { FeedItem, SourceInfo, TagSugerida } from '@devhub/state'
+import type { FeedItem, SourceInfo, TagSugerida, TraducaoExibida } from '@devhub/state'
 import type { Contexto } from './db.js'
 
 /**
@@ -15,20 +15,35 @@ export function montarFeed(
   const agora = Date.now()
   const salvos = idsSalvos(ctx)
 
-  return ctx.stories
-    .topRanked(limit, category, agora)
+  const ranqueadas = ctx.stories.topRanked(limit, category, agora)
+  // Uma consulta só para as traduções de toda a página, em vez de uma por card.
+  const traducoes = ctx.translations.paraArtigos(
+    ranqueadas.map((r) => r.primaryArticleId), 'pt',
+  )
+
+  return ranqueadas
     .map((r) => {
       const article = ctx.articles.byId(r.primaryArticleId)
       if (!article) return null
+      const t = traducoes.get(article.id)
       return {
         story: r.story,
         article,
         tags: ctx.tags.tagsFor(article.id),
         breakdown: r.breakdown,
         saved: salvos.has(article.id),
+        ...(t ? { traducao: paraExibicao(t) } : {}),
       }
     })
     .filter((x): x is FeedItem => x !== null)
+}
+
+function paraExibicao(t: {
+  title: string; excerpt: string; sourceLang: string; model: string
+}): TraducaoExibida {
+  return {
+    title: t.title, excerpt: t.excerpt, sourceLang: t.sourceLang, model: t.model,
+  }
 }
 
 function idsSalvos(ctx: Contexto): Set<string> {
@@ -41,6 +56,7 @@ function idsSalvos(ctx: Contexto): Set<string> {
 
 /** Constrói um FeedItem a partir de um artigo avulso (busca e salvos). */
 function itemDoArtigo(ctx: Contexto, article: Article, salvo: boolean): FeedItem {
+  const trad = ctx.translations.get(article.id, 'pt')
   const historia = article.storyId
     ? ctx.driver.get<{
       id: string; canonical_title: string; canonical_summary: string | null
@@ -79,6 +95,7 @@ function itemDoArtigo(ctx: Contexto, article: Article, salvo: boolean): FeedItem
       freshness: 0, trust: 0, importance: 0, affinity: 1, dedupPenalty: 1, total: 0,
     },
     saved: salvo,
+    ...(trad ? { traducao: paraExibicao(trad) } : {}),
   }
 }
 

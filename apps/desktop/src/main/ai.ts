@@ -13,6 +13,8 @@ export interface EstadoIA {
   requisicoesHoje: number
   tetoDiario: number
   tokensHoje: number
+  aTraduzir: number
+  traduzidos: number
 }
 
 const CHAVE_MODELO = 'ai_model'
@@ -37,6 +39,45 @@ export async function providerParaIngestao(ctx: Contexto): Promise<AIProvider> {
   return provider
 }
 
+/**
+ * Traduz o corpo completo de um artigo, sob demanda ao abrir.
+ *
+ * O título e o resumo já vieram traduzidos de carona no lote de
+ * classificação; aqui completamos o texto. Devolve false quando não há
+ * como traduzir — sem chave, sem cota ou sem internet.
+ */
+export async function traduzirArtigo(ctx: Contexto, articleId: string): Promise<boolean> {
+  const artigo = ctx.articles.byId(articleId)
+  if (!artigo) return false
+  if (artigo.lang === 'pt' || artigo.lang === 'desconhecido') return false
+  if (ctx.translations.temCorpo(articleId, 'pt')) return true
+
+  const provider = await providerParaIngestao(ctx)
+  const t = await provider.translate({
+    id: artigo.id,
+    title: artigo.title,
+    excerpt: artigo.excerpt,
+    contentText: artigo.contentText,
+    sourceTrust: 1,
+    categoryHint: null,
+    lang: artigo.lang,
+  })
+  if (!t) return false
+
+  ctx.translations.upsert({
+    articleId,
+    targetLang: 'pt',
+    sourceLang: artigo.lang,
+    title: t.title,
+    excerpt: t.excerpt,
+    contentText: t.contentText,
+    provider: t.provider,
+    model: t.model,
+    translatedAt: Date.now(),
+  })
+  return true
+}
+
 export async function lerEstadoIA(ctx: Contexto): Promise<EstadoIA> {
   const platform = criarPlatform(ctx)
   const agora = Date.now()
@@ -56,6 +97,8 @@ export async function lerEstadoIA(ctx: Contexto): Promise<EstadoIA> {
     requisicoesHoje: ctx.usage.requisicoesHoje(agora),
     tetoDiario: governador?.tetoDiario ?? 0,
     tokensHoje: uso.reduce((s, u) => s + u.tokensEntrada + u.tokensSaida, 0),
+    aTraduzir: ctx.translations.pendentes('pt', 100_000).length,
+    traduzidos: ctx.translations.contar('pt'),
   }
 }
 

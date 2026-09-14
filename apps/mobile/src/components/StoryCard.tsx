@@ -11,7 +11,9 @@ interface Props {
 }
 
 export function StoryCard({ item, p, onAbrir, onSalvar }: Props) {
-  const { story, article, tags, saved } = item
+  const { story, article, tags, saved, traducao } = item
+  const titulo = traducao?.title ?? story.canonicalTitle
+  const resumo = traducao?.excerpt || article.excerpt
   const corCategoria = p[story.category]
 
   return (
@@ -52,6 +54,12 @@ export function StoryCard({ item, p, onAbrir, onSalvar }: Props) {
           </View>
         )}
 
+        {traducao && (
+          <View style={[e.chip, { backgroundColor: `${p.innovation}22` }]}>
+            <Text style={[e.chipTexto, { color: p.innovation }]}>⇄ TRADUZIDO</Text>
+          </View>
+        )}
+
         <View style={e.espacador} />
 
         <Pressable
@@ -67,12 +75,12 @@ export function StoryCard({ item, p, onAbrir, onSalvar }: Props) {
       </View>
 
       <Text style={[e.titulo, { color: p.text }]} numberOfLines={3}>
-        {story.canonicalTitle}
+        {titulo}
       </Text>
 
-      {!!article.excerpt && (
+      {!!resumo && (
         <Text style={[e.resumo, { color: p.textMuted }]} numberOfLines={2}>
-          {article.excerpt}
+          {resumo}
         </Text>
       )}
 

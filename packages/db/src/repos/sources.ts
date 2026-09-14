@@ -55,6 +55,17 @@ export class SourcesRepo {
     )
   }
 
+  /** Idioma dominante aprendido dos artigos desta fonte. */
+  setLang(id: string, lang: string): void {
+    this.db.run('UPDATE sources SET lang = ? WHERE id = ?', [lang, id])
+  }
+
+  getLang(id: string): string | null {
+    return this.db.get<{ lang: string | null }>(
+      'SELECT lang FROM sources WHERE id = ?', [id],
+    )?.lang ?? null
+  }
+
   deactivate(id: string): void {
     this.db.run('UPDATE sources SET active = 0 WHERE id = ?', [id])
   }

@@ -600,3 +600,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: transform 140ms ease;
 }
 .interruptor.on .interruptor-bolinha { transform: translateX(18px); background: #fff; }
+
+.chip-trad {
+  background: color-mix(in srgb, var(--innovation) 14%, transparent);
+  color: var(--innovation);
+  font-weight: 550;
+  cursor: help;
+}
+
+.aviso-traducao {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-lg);
+  margin-bottom: var(--sp-xl);
+  background: color-mix(in srgb, var(--innovation) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--innovation) 30%, transparent);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.aviso-traducao strong { color: var(--innovation); }
+.aviso-traducao button { margin-left: auto; white-space: nowrap; }

@@ -21,6 +21,7 @@ const devhub = {
   aiModels: () => ipcRenderer.invoke('aiModels'),
   setApiKey: (chave: string) => ipcRenderer.invoke('setApiKey', chave),
   setAiModel: (model: string) => ipcRenderer.invoke('setAiModel', model),
+  translateArticle: (id: string) => ipcRenderer.invoke('translateArticle', id),
   scheduleStatus: () => ipcRenderer.invoke('scheduleStatus'),
   setAutoIngest: (ligada: boolean) => ipcRenderer.invoke('setAutoIngest', ligada),
   aoIngestaoAutomatica: (cb: () => void) => {

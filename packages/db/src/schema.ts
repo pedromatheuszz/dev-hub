@@ -151,4 +151,32 @@ CREATE VIRTUAL TABLE articles_fts USING fts5(
 );
 `,
   },
+  {
+    version: 2,
+    // Idioma dominante da fonte, aprendido dos artigos dela.
+    //
+    // Metade dos artigos e so titulo, sem corpo: "GitLab 19.3 released" nao
+    // tem uma palavra funcional sequer, entao a deteccao por texto nao tem
+    // como funcionar neles. A fonte resolve: um blog publica num idioma so.
+    up: `ALTER TABLE sources ADD COLUMN lang TEXT;`,
+  },
+  {
+    version: 3,
+    up: `
+CREATE TABLE translations (
+  article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  target_lang TEXT NOT NULL,
+  source_lang TEXT NOT NULL,
+  title TEXT NOT NULL,
+  excerpt TEXT NOT NULL DEFAULT '',
+  content_text TEXT,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  translated_at INTEGER NOT NULL,
+  PRIMARY KEY (article_id, target_lang)
+);
+CREATE INDEX idx_translations_lang ON translations(target_lang);
+CREATE INDEX idx_articles_lang ON articles(lang);
+`,
+  },
 ]

@@ -3,6 +3,7 @@ import { ipcMain, shell } from 'electron'
 import type { Contexto } from './db.js'
 import {
   gravarChave, gravarModelo, lerEstadoIA, listarModelos, providerParaIngestao,
+  traduzirArtigo,
 } from './ai.js'
 import { gravarPreferencias, lerPreferencias, notificarApos } from './notify.js'
 import { criarPlatform } from './platform.js'
@@ -50,8 +51,22 @@ export function registrarIpc(ctx: Contexto): void {
 
   ipcMain.handle('article', (_e, id) => {
     const article = ctx.articles.byId(validarTexto(id, 64))
-    return article ? { article, tags: ctx.tags.tagsFor(article.id) } : null
+    if (!article) return null
+    const t = ctx.translations.get(article.id, 'pt')
+    return {
+      article,
+      tags: ctx.tags.tagsFor(article.id),
+      ...(t ? {
+        traducao: {
+          title: t.title, excerpt: t.excerpt, sourceLang: t.sourceLang,
+          model: t.model, contentText: t.contentText,
+        },
+      } : {}),
+    }
   })
+
+  ipcMain.handle('translateArticle', async (_e, id) =>
+    traduzirArtigo(ctx, validarTexto(id, 64)))
 
   ipcMain.handle('toggleSaved', (_e, id) => alternarSalvo(ctx, validarTexto(id, 64)))
 

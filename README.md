@@ -103,6 +103,30 @@ confiança. Isso impede que um boato replicado por agregadores vire manchete.
 
 ---
 
+## Tradução automática
+
+As fontes são internacionais e publicam em inglês. O Dev Hub detecta o idioma
+de cada artigo e, **com a chave do Gemini configurada**, traduz título e resumo
+para português junto da classificação — sem requisição extra, porque o título
+já ia no prompt de qualquer forma. O corpo completo é traduzido quando você
+abre o artigo.
+
+Todo artigo traduzido leva o selo **⇄ Traduzido**, e no leitor há um botão
+"Ver original" para conferir o texto como foi publicado.
+
+**Sem a chave, nada é traduzido** — e o app diz isso em Configurações, em vez
+de fingir. Traduzir exige um modelo de linguagem; um dicionário palavra a
+palavra daria ao leitor a impressão falsa de estar lendo tradução confiável.
+
+A detecção de idioma é por palavras funcionais, mas **metade dos artigos é só
+título**, sem corpo: `"GitLab 19.3 released"` não tem uma palavra funcional
+sequer. Por isso o idioma é resolvido também no nível da **fonte** — um blog
+publica num idioma só, então os artigos curtos herdam o idioma dominante dos
+artigos longos daquela fonte. Medido: a detecção saiu de 50% de desconhecidos
+para 100% identificados.
+
+---
+
 ## Inteligência artificial
 
 O Dev Hub funciona **sem nenhuma chave de API**. Por padrão usa classificação
@@ -124,6 +148,10 @@ Oito mecanismos protegem a cota gratuita:
 | 6 | Ingestão automática uma vez por dia, às 5h |
 | 7 | Degradação para heurística: sem chave, sem cota ou sem internet, o app segue inteiro |
 | 8 | Painel de consumo com requisições e tokens do dia |
+
+A tradução é o melhor exemplo do mecanismo 1: ela pega carona no lote de
+classificação que já roda, então traduzir 1.800 artigos não custa nenhuma
+requisição a mais.
 
 Toda saída do modelo é validada antes de tocar o banco: tag que não existe na
 taxonomia é descartada, categoria inválida cai no padrão, importância fora de

@@ -1,5 +1,5 @@
 import type { FeedItem } from '@devhub/state'
-import { hostDe, rotuloCategoria, rotuloTipo, tempoRelativo } from '../api.js'
+import { hostDe, rotuloCategoria, rotuloIdioma, rotuloTipo, tempoRelativo } from '../api.js'
 
 interface Props {
   item: FeedItem
@@ -17,8 +17,13 @@ interface Props {
 export function StoryCard({
   item, selecionado, mostrarScore, onAbrir, onSelecionar, onSalvar,
 }: Props) {
-  const { story, article, tags, breakdown, saved } = item
+  const { story, article, tags, breakdown, saved, traducao } = item
   const b = breakdown
+
+  // Quando há tradução, ela é o que se lê; o original fica no title do
+  // elemento, a um passar de mouse. O selo deixa claro que é automática.
+  const titulo = traducao?.title ?? story.canonicalTitle
+  const resumo = traducao?.excerpt || article.excerpt
 
   return (
     <div
@@ -42,6 +47,16 @@ export function StoryCard({
         {article.contentType !== 'news' && (
           <span className="chip chip-type">{rotuloTipo(article.contentType)}</span>
         )}
+        {traducao && (
+          <span
+            className="chip chip-trad"
+            title={`Traduzido automaticamente do ${rotuloIdioma(traducao.sourceLang)}.
+
+Original: ${story.canonicalTitle}`}
+          >
+            ⇄ Traduzido
+          </span>
+        )}
         <button
           className={`icon-btn${saved ? ' on' : ''}`}
           style={{ marginLeft: 'auto' }}
@@ -56,9 +71,11 @@ export function StoryCard({
         </button>
       </div>
 
-      <h3 className="card-title">{story.canonicalTitle}</h3>
+      <h3 className="card-title" title={traducao ? story.canonicalTitle : undefined}>
+        {titulo}
+      </h3>
 
-      {article.excerpt && <p className="card-excerpt">{article.excerpt}</p>}
+      {resumo && <p className="card-excerpt">{resumo}</p>}
 
       <div className="card-meta">
         <span>{hostDe(article.url)}</span>

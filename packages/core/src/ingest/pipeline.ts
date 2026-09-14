@@ -4,6 +4,7 @@ import { simhash } from '../dedup/simhash.js'
 import { parseFeed } from '../feeds/index.js'
 import { isRelevant } from '../filter/prefilter.js'
 import { normalizeItem } from '../normalize/article.js'
+import { detectarIdioma } from '../normalize/language.js'
 import type { Platform } from '../platform.js'
 import { isBreaking } from '../rank/breaking.js'
 import { TAG_DICTIONARY } from '../taxonomy/dictionary.js'
@@ -22,6 +23,9 @@ export interface SourcesPort {
   markFetched(
     id: string, at: number, etag: string | null, lastModified: string | null,
   ): void
+  /** Idioma dominante aprendido dos artigos da fonte. */
+  setLang(id: string, lang: string): void
+  getLang(id: string): string | null
 }
 
 export interface ArticlesPort {
@@ -42,6 +46,14 @@ export interface TagsPort {
   ): void
 }
 
+export interface TranslationsPort {
+  upsert(t: {
+    articleId: string; targetLang: string; sourceLang: string
+    title: string; excerpt: string; contentText: string | null
+    provider: string; model: string; translatedAt: number
+  }): void
+}
+
 export interface SearchPort {
   index(a: {
     id: string; title: string; excerpt: string; contentText: string; tags: string[]
@@ -55,6 +67,8 @@ export interface IngestDeps {
   stories: StoriesPort
   tags: TagsPort
   search: SearchPort
+  /** Opcional: sem ele o pipeline simplesmente não guarda traduções. */
+  translations?: TranslationsPort
   ai: AIProvider
 }
 
@@ -67,6 +81,8 @@ export interface IngestReport {
   historiasCriadas: number
   /** Ids dos artigos criados nesta rodada — as notificações consomem isto. */
   idsNovos: string[]
+  /** Quantos foram traduzidos automaticamente nesta rodada. */
+  traduzidos: number
 }
 
 const POR_SLUG = new Map(TAG_DICTIONARY.map((t) => [t.slug, t]))
@@ -79,12 +95,13 @@ const LOTE_IA = 12
  * demais (constraint global do plano).
  */
 export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
-  const { platform, sources, articles, stories, tags, search, ai } = deps
+  const { platform, sources, articles, stories, tags, search, ai, translations } = deps
   const agora = platform.clock.now()
 
   const rel: IngestReport = {
     fontesLidas: 0, fontesComErro: 0, itensVistos: 0,
     itensNovos: 0, itensFiltrados: 0, historiasCriadas: 0, idsNovos: [],
+    traduzidos: 0,
   }
 
   const ativas = sources.listActive()
@@ -92,8 +109,40 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
   const novos: Article[] = []
   const jaVistosNestaRodada = new Set<string>()
 
+  /**
+   * Resolve o idioma dos artigos de uma fonte.
+   *
+   * Metade do acervo é só título, sem corpo — "GitLab 19.3 released" não tem
+   * uma palavra funcional sequer, então a detecção por texto não tem como
+   * funcionar neles. O idioma dominante da fonte cobre esses casos: um blog
+   * publica num idioma só.
+   */
+  function resolverIdiomas(fonteId: string, lote: Article[]): void {
+    if (lote.length === 0) return
+
+    const contagem = new Map<string, number>()
+    for (const a of lote) {
+      if (a.lang === 'desconhecido') continue
+      contagem.set(a.lang, (contagem.get(a.lang) ?? 0) + 1)
+    }
+
+    let dominante = sources.getLang(fonteId)
+    for (const [idioma, n] of contagem) {
+      const atual = dominante ? (contagem.get(dominante) ?? 0) : -1
+      if (n > atual) dominante = idioma
+    }
+
+    if (dominante) {
+      sources.setLang(fonteId, dominante)
+      for (const a of lote) {
+        if (a.lang === 'desconhecido') a.lang = dominante
+      }
+    }
+  }
+
   // ---- Etapas 1 a 6: buscar, parsear, normalizar, filtrar, fingerprint ----
   for (const fonte of ativas) {
+    const loteDaFonte: Article[] = []
     try {
       const res = await platform.http.get({
         url: fonte.feedUrl,
@@ -130,7 +179,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
           continue
         }
 
-        novos.push({
+        loteDaFonte.push({
           ...base,
           simhash: simhash(`${base.title} ${base.contentText.slice(0, 500)}`),
           storyId: null,
@@ -138,6 +187,9 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
           aiState: 'pending',
         })
       }
+
+      resolverIdiomas(fonte.id, loteDaFonte)
+      novos.push(...loteDaFonte)
     } catch (e) {
       rel.fontesComErro++
       platform.logger.warn(`falha na fonte ${fonte.id}`, e)
@@ -165,6 +217,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
         contentText: a.contentText,
         sourceTrust: f?.trustWeight ?? 0.5,
         categoryHint: f?.categoryHint ?? null,
+        lang: a.lang,
       }
     })
 
@@ -180,6 +233,23 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
     if (!c) continue
 
     articles.upsert({ ...a, contentType: c.contentType, aiState: 'classified' })
+
+    // Tradução veio de carona no lote de classificação: o título e o resumo
+    // já estavam no prompt, então pedi-la custou quase nada a mais.
+    if (c.translation && translations) {
+      translations.upsert({
+        articleId: a.id,
+        targetLang: 'pt',
+        sourceLang: a.lang,
+        title: c.translation.title,
+        excerpt: c.translation.excerpt,
+        contentText: null, // o corpo é traduzido sob demanda, ao abrir
+        provider: ai.name,
+        model: '',
+        translatedAt: platform.clock.now(),
+      })
+      rel.traduzidos++
+    }
 
     for (const t of c.tags) {
       const def = POR_SLUG.get(t.slug)

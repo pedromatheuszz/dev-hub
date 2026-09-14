@@ -12,12 +12,21 @@ import { create } from 'zustand'
  * implementado por IPC no Electron e por chamada direta no React Native.
  */
 
+export interface TraducaoExibida {
+  title: string
+  excerpt: string
+  sourceLang: string
+  model: string
+}
+
 export interface FeedItem {
   story: Story
   article: Article
   tags: string[]
   breakdown: ScoreBreakdown
   saved: boolean
+  /** Presente só quando o artigo foi traduzido automaticamente. */
+  traducao?: TraducaoExibida
 }
 
 export interface IngestSummary {
@@ -28,6 +37,7 @@ export interface IngestSummary {
   itensFiltrados: number
   historiasCriadas: number
   idsNovos: string[]
+  traduzidos: number
 }
 
 export interface TagSugerida {
@@ -46,6 +56,9 @@ export interface EstadoIA {
   requisicoesHoje: number
   tetoDiario: number
   tokensHoje: number
+  /** Artigos em outro idioma que ainda não têm tradução. */
+  aTraduzir: number
+  traduzidos: number
 }
 
 export interface PrefsNotificacao {
@@ -82,7 +95,9 @@ export interface DevHubApi {
   feed(category: Category | null, limit: number): Promise<FeedItem[]>
   saved(limit: number): Promise<FeedItem[]>
   search(query: string, limit: number): Promise<FeedItem[]>
-  article(id: string): Promise<{ article: Article; tags: string[] } | null>
+  article(id: string): Promise<{
+    article: Article; tags: string[]; traducao?: TraducaoExibida & { contentText: string | null }
+  } | null>
   toggleSaved(articleId: string): Promise<boolean>
   recordRead(articleId: string): Promise<void>
   ingest(): Promise<IngestSummary>
@@ -98,6 +113,8 @@ export interface DevHubApi {
   setNotifPrefs(p: Partial<PrefsNotificacao>): Promise<void>
   scheduleStatus(): Promise<StatusAgendamento>
   setAutoIngest(ligada: boolean): Promise<void>
+  /** Traduz o corpo completo sob demanda, ao abrir o artigo. */
+  translateArticle(articleId: string): Promise<boolean>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
   openExternal(url: string): Promise<void>

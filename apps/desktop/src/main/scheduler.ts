@@ -65,6 +65,7 @@ export async function executarIngestao(ctx: Contexto) {
     stories: ctx.stories,
     tags: ctx.tags,
     search: ctx.search,
+    translations: ctx.translations,
     ai: await providerParaIngestao(ctx),
   })
 

@@ -1,5 +1,6 @@
 import type { Article, RawFeedItem, Source } from '../types.js'
 import { parseFeedDate } from './dates.js'
+import { detectarIdioma } from './language.js'
 import { htmlToText, sanitizeHtml } from './html.js'
 import { canonicalizeUrl, stableId } from './urls.js'
 
@@ -40,7 +41,8 @@ export function normalizeItem(
     contentText,
     contentHtml: item.contentHtml ? sanitizeHtml(item.contentHtml) : null,
     imageUrl: item.imageUrl,
-    lang: 'en',
+    // Detectado, não chutado: é o que decide o que vale traduzir.
+    lang: detectarIdioma(`${item.title} ${contentText || excerpt}`).idioma,
     wordCount,
     readingMinutes: Math.max(1, Math.ceil(wordCount / PALAVRAS_POR_MINUTO)),
   }
