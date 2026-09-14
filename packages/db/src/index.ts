@@ -1,5 +1,9 @@
 export type { SqlDriver, SqlParams, SqlValue } from './driver.js'
-export { NodeSqliteDriver } from './drivers/node-sqlite.js'
+// Drivers concretos NÃO saem daqui: importar @devhub/db a partir do
+// Android puxaria node:sqlite para o bundle e quebraria no Hermes.
+// Cada plataforma importa o seu por subpath:
+//   @devhub/db/node -> NodeSqliteDriver (Electron, CLI)
+//   @devhub/db/expo -> ExpoSqliteDriver (Android)
 export { MIGRATIONS, type Migration } from './schema.js'
 export { migrate } from './migrate.js'
 

@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Dev Hub",
+    "slug": "dev-hub",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "devhub",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0B0D11",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "dev.devhub.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#2F6FED"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}

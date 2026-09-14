@@ -1,8 +1,9 @@
+import { NodeSqliteDriver } from '@devhub/db/node'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import {
-  ArticlesRepo, NodeSqliteDriver, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
+  ArticlesRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
 } from '@devhub/db'
 import { SOURCES } from '@devhub/core'
 
