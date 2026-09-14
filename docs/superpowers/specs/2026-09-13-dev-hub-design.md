@@ -40,7 +40,7 @@ para que um backend em nuvem possa ser acrescentado depois sem reescrita.
 | Núcleo de lógica | TypeScript puro, sem dependência de plataforma |
 | Desktop | Electron + React DOM + Vite |
 | Mobile | React Native via Expo |
-| Persistência | SQLite (`better-sqlite3` no desktop, `expo-sqlite` no mobile) |
+| Persistência | SQLite (`node:sqlite` no desktop, `expo-sqlite` no mobile) |
 | Estado | Zustand (funciona idêntico em web e native) |
 | Busca | SQLite FTS5 |
 | IA | Gemini API (cota gratuita) atrás de uma interface trocável |
@@ -545,6 +545,11 @@ heurística do que uma interface com IA perfeita.
 2. **Tauri fora por ora.** Exigiria Rust + MSVC Build Tools. O Electron pesa
    mais (~150 MB de instalador), o que é uma concessão consciente à meta de
    baixo consumo de memória.
+
+   *Atualização durante o planejamento da Fase 1:* verificou-se nesta máquina
+   que o módulo `node:sqlite` embutido no Node 24 já traz FTS5 com ranking
+   BM25. Isso dispensa o `better-sqlite3` e elimina toda dependência nativa
+   compilada do projeto — a tabela da seção 2.1 foi corrigida.
 3. **Limites da cota gratuita não verificados.** As ferramentas de busca web
    estavam indisponíveis durante o design. Os números da seção 6.3 são
    estimativas de volume próprio, não limites confirmados do provedor. O
