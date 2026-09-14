@@ -9,3 +9,8 @@ dist/
 data/
 coverage/
 .DS_Store
+out/
+apps/*/out/
+.expo/
+android/
+ios/
