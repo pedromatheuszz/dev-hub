@@ -29,7 +29,9 @@ export function normalizeItem(
     sourceId: source.id,
     url,
     canonicalUrl,
-    title: item.title.trim(),
+    // Passa pelo htmlToText, não só trim: feeds costumam escapar duas
+    // vezes, então o parser XML entrega "What&#8217;s" literal no título.
+    title: htmlToText(item.title),
     subtitle: null,
     author: item.author?.trim() || null,
     publishedAt: parseFeedDate(item.publishedAt, now),

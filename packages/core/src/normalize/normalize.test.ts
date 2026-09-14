@@ -112,6 +112,24 @@ describe('normalizeItem', () => {
   const a = normalizeItem(item, fonte, NOW)
 
   it('apara o título', () => expect(a.title).toBe('Rust 1.90 lançado'))
+
+  it('decodifica entidade HTML deixada por feed com escape duplo', () => {
+    const d = normalizeItem(
+      { ...item, title: 'What&#8217;s behind the AI industry&#8217;s boom' },
+      fonte, NOW,
+    )
+    expect(d.title).toBe('What’s behind the AI industry’s boom')
+  })
+
+  it('decodifica entidades nomeadas no título', () => {
+    const d = normalizeItem({ ...item, title: 'Rust &amp; Go: C&#43;&#43; rivals' }, fonte, NOW)
+    expect(d.title).toBe('Rust & Go: C++ rivals')
+  })
+
+  it('remove marcação solta que venha no título', () => {
+    const d = normalizeItem({ ...item, title: '<b>Kubernetes</b> 1.37' }, fonte, NOW)
+    expect(d.title).toBe('Kubernetes 1.37')
+  })
   it('canonicaliza a URL e mantém a original', () => {
     expect(a.canonicalUrl).toBe('https://a.dev/rust')
     expect(a.url).toBe('https://a.dev/rust?utm_source=rss')
