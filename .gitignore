@@ -14,3 +14,8 @@ apps/*/out/
 .expo/
 android/
 ios/
+dist/
+apps/*/dist/
+apps/mobile/android/
+apps/mobile/ios/
+local.properties

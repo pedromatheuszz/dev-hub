@@ -12,7 +12,9 @@ export function fakeHttp(
 ): HttpClient {
   return {
     async get(req) {
-      const hit = routes[req.url]
+      // Permite registrar "POST https://x" para distinguir do GET na mesma URL.
+      const chaveComMetodo = `${req.method ?? 'GET'} ${req.url}`
+      const hit = routes[chaveComMetodo] ?? routes[req.url]
       if (!hit) throw new Error(`fakeHttp: rota não registrada para ${req.url}`)
       return { status: hit.status ?? 200, body: hit.body, headers: hit.headers ?? {} }
     },

@@ -507,3 +507,96 @@ button { font: inherit; color: inherit; cursor: pointer; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------------------------------------------- seguindo */
+
+.follow-grid {
+  display: grid;
+  gap: var(--sp-sm);
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.follow-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-md) var(--sp-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: background 110ms ease, border-color 110ms ease;
+}
+.follow-chip:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.follow-chip.on { border-color: var(--accent); background: var(--accent-soft); }
+
+.follow-nome {
+  font-size: var(--fs-base);
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.follow-contagem {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 1px 5px;
+  background: var(--surface-alt);
+  border-radius: var(--r-pill);
+}
+.follow-acao {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.follow-chip.on .follow-acao { color: var(--accent); font-weight: 600; }
+
+/* ---------------------------------------------------------- IA / config */
+
+.campo {
+  padding: 6px var(--sp-md);
+  min-width: 230px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.campo:focus { border-color: var(--accent); outline: none; }
+
+.barra-cota {
+  height: 5px;
+  width: 100%;
+  max-width: 320px;
+  margin-top: var(--sp-sm);
+  background: var(--surface-alt);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.barra-cota-preenchida {
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition: width 220ms ease;
+}
+
+.interruptor {
+  width: 40px; height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-alt);
+  padding: 2px;
+  display: flex; align-items: center;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.interruptor.on { background: var(--accent); border-color: var(--accent); }
+.interruptor:disabled { opacity: 0.45; cursor: default; }
+.interruptor-bolinha {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform 140ms ease;
+}
+.interruptor.on .interruptor-bolinha { transform: translateX(18px); background: #fff; }

@@ -1,9 +1,10 @@
+import { NodeSqliteDriver } from '@devhub/db/node'
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { HeuristicProvider, SOURCES, runIngest, type Category } from '@devhub/core'
 import {
-  ArticlesRepo, NodeSqliteDriver, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
+  ArticlesRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
 } from '@devhub/db'
 import { nodePlatform } from './platform-node.js'
 

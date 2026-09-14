@@ -1,10 +1,14 @@
-import { HeuristicProvider, runIngest, type Category } from '@devhub/core'
+import { runIngest, type Category } from '@devhub/core'
 import { ipcMain, shell } from 'electron'
 import type { Contexto } from './db.js'
+import {
+  gravarChave, gravarModelo, lerEstadoIA, listarModelos, providerParaIngestao,
+} from './ai.js'
+import { gravarPreferencias, lerPreferencias, notificarApos } from './notify.js'
 import { criarPlatform } from './platform.js'
 import {
-  alternarSalvo, buscar, gravarConfig, lerConfig, listarFontes, listarSalvos,
-  montarFeed, registrarLeitura,
+  alternarFollow, alternarSalvo, buscar, gravarConfig, lerConfig, lerHistorico,
+  listarFontes, listarSalvos, montarFeed, registrarLeitura, sugerirTags,
 } from './queries.js'
 
 /** Protocolos que podem sair para o navegador do sistema. Nada mais. */
@@ -54,21 +58,63 @@ export function registrarIpc(ctx: Contexto): void {
 
   ipcMain.handle('sources', () => listarFontes(ctx))
 
+  ipcMain.handle('suggestedTags', (_e, limite) =>
+    sugerirTags(ctx, validarLimite(limite, 40)))
+
+  ipcMain.handle('toggleFollow', (_e, kind, alvo) => {
+    const k = validarTexto(kind, 16)
+    if (k !== 'tag' && k !== 'category' && k !== 'source') return false
+    return alternarFollow(ctx, k, validarTexto(alvo, 100))
+  })
+
+  ipcMain.handle('history', (_e, limite) =>
+    lerHistorico(ctx, validarLimite(limite)))
+
   ipcMain.handle('getSetting', (_e, k) => lerConfig(ctx, validarTexto(k, 64)))
 
   ipcMain.handle('setSetting', (_e, k, v) => {
     gravarConfig(ctx, validarTexto(k, 64), validarTexto(v, 2000))
   })
 
-  ipcMain.handle('ingest', async () => runIngest({
-    platform: criarPlatform(ctx),
-    sources: ctx.sources,
-    articles: ctx.articles,
-    stories: ctx.stories,
-    tags: ctx.tags,
-    search: ctx.search,
-    ai: new HeuristicProvider(),
-  }))
+  ipcMain.handle('ingest', async () => {
+    const relatorio = await runIngest({
+      platform: criarPlatform(ctx),
+      sources: ctx.sources,
+      articles: ctx.articles,
+      stories: ctx.stories,
+      tags: ctx.tags,
+      search: ctx.search,
+      // Gemini quando há chave configurada; heurística caso contrário.
+      ai: await providerParaIngestao(ctx),
+    })
+    notificarApos(ctx, relatorio.idsNovos)
+    return relatorio
+  })
+
+  ipcMain.handle('notifPrefs', () => lerPreferencias(ctx))
+
+  ipcMain.handle('setNotifPrefs', (_e, prefs) => {
+    if (typeof prefs !== 'object' || prefs === null) return
+    const p = prefs as Record<string, unknown>
+    gravarPreferencias(ctx, {
+      ativadas: Boolean(p['ativadas']),
+      ultimaHora: Boolean(p['ultimaHora']),
+      topicosSeguidos: Boolean(p['topicosSeguidos']),
+    })
+  })
+
+  ipcMain.handle('aiState', async () => lerEstadoIA(ctx))
+
+  ipcMain.handle('aiModels', async () => listarModelos(ctx))
+
+  // A chave nunca volta para o renderer: só entra. O que sai é aiState.temChave.
+  ipcMain.handle('setApiKey', async (_e, chave) => {
+    await gravarChave(ctx, validarTexto(chave, 200))
+  })
+
+  ipcMain.handle('setAiModel', (_e, model) => {
+    gravarModelo(ctx, validarTexto(model, 100))
+  })
 
   ipcMain.handle('openExternal', async (_e, url) => {
     const bruta = validarTexto(url, 2000)

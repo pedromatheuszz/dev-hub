@@ -13,6 +13,19 @@ const devhub = {
   recordRead: (id: string) => ipcRenderer.invoke('recordRead', id),
   ingest: () => ipcRenderer.invoke('ingest'),
   sources: () => ipcRenderer.invoke('sources'),
+  suggestedTags: (limit: number) => ipcRenderer.invoke('suggestedTags', limit),
+  toggleFollow: (kind: string, targetId: string) =>
+    ipcRenderer.invoke('toggleFollow', kind, targetId),
+  history: (limit: number) => ipcRenderer.invoke('history', limit),
+  aiState: () => ipcRenderer.invoke('aiState'),
+  aiModels: () => ipcRenderer.invoke('aiModels'),
+  setApiKey: (chave: string) => ipcRenderer.invoke('setApiKey', chave),
+  setAiModel: (model: string) => ipcRenderer.invoke('setAiModel', model),
+  notifPrefs: () => ipcRenderer.invoke('notifPrefs'),
+  setNotifPrefs: (p: unknown) => ipcRenderer.invoke('setNotifPrefs', p),
+  aoAbrirArtigo: (cb: (id: string) => void) => {
+    ipcRenderer.on('abrirArtigo', (_e, id: string) => cb(id))
+  },
   getSetting: (k: string) => ipcRenderer.invoke('getSetting', k),
   setSetting: (k: string, v: string) => ipcRenderer.invoke('setSetting', k, v),
   openExternal: (url: string) => ipcRenderer.invoke('openExternal', url),

@@ -1,8 +1,10 @@
+import { NodeSqliteDriver } from '@devhub/db/node'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import {
-  ArticlesRepo, NodeSqliteDriver, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
+  ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
+  UsageRepo, migrate,
 } from '@devhub/db'
 import { SOURCES } from '@devhub/core'
 
@@ -13,6 +15,8 @@ export interface Contexto {
   stories: StoriesRepo
   tags: TagsRepo
   search: SearchRepo
+  follows: FollowsRepo
+  usage: UsageRepo
 }
 
 let ctx: Contexto | null = null
@@ -40,6 +44,8 @@ export function abrirBanco(): Contexto {
     stories: new StoriesRepo(driver),
     tags: new TagsRepo(driver),
     search: new SearchRepo(driver),
+    follows: new FollowsRepo(driver),
+    usage: new UsageRepo(driver),
   }
   return ctx
 }

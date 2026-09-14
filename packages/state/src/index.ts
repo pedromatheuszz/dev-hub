@@ -27,6 +27,38 @@ export interface IngestSummary {
   itensNovos: number
   itensFiltrados: number
   historiasCriadas: number
+  idsNovos: string[]
+}
+
+export interface TagSugerida {
+  slug: string
+  name: string
+  kind: string
+  artigos: number
+  seguindo: boolean
+}
+
+export interface EstadoIA {
+  temChave: boolean
+  provider: 'gemini' | 'heuristic'
+  model: string
+  motivoHeuristica: 'sem_chave' | 'sem_modelo' | null
+  requisicoesHoje: number
+  tetoDiario: number
+  tokensHoje: number
+}
+
+export interface PrefsNotificacao {
+  ativadas: boolean
+  ultimaHora: boolean
+  topicosSeguidos: boolean
+  maxPorDia: number
+  intervaloMinimoMs: number
+}
+
+export interface ModeloIA {
+  id: string
+  name: string
 }
 
 export interface SourceInfo {
@@ -48,6 +80,15 @@ export interface DevHubApi {
   recordRead(articleId: string): Promise<void>
   ingest(): Promise<IngestSummary>
   sources(): Promise<SourceInfo[]>
+  suggestedTags(limit: number): Promise<TagSugerida[]>
+  toggleFollow(kind: 'tag' | 'category', targetId: string): Promise<boolean>
+  history(limit: number): Promise<FeedItem[]>
+  aiState(): Promise<EstadoIA>
+  aiModels(): Promise<ModeloIA[]>
+  setApiKey(chave: string): Promise<void>
+  setAiModel(model: string): Promise<void>
+  notifPrefs(): Promise<PrefsNotificacao>
+  setNotifPrefs(p: Partial<PrefsNotificacao>): Promise<void>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
   openExternal(url: string): Promise<void>
@@ -60,6 +101,7 @@ export type Route =
   | { name: 'trending' }
   | { name: 'saved' }
   | { name: 'following' }
+  | { name: 'history' }
   | { name: 'settings' }
   | { name: 'article'; id: string }
 
@@ -87,6 +129,9 @@ export interface DevHubState {
   ingesting: boolean
   lastIngest: IngestSummary | null
 
+  suggested: TagSugerida[]
+  loadingSuggested: boolean
+
   init(api: DevHubApi): Promise<void>
   navigate(route: Route): Promise<void>
   goBack(): Promise<void>
@@ -101,6 +146,9 @@ export interface DevHubState {
   openSelected(): Promise<void>
   toggleSavedSelected(): Promise<void>
   toggleSaved(articleId: string): Promise<void>
+
+  loadSuggested(): Promise<void>
+  toggleFollow(kind: 'tag' | 'category', targetId: string): Promise<void>
 
   setThemePref(p: ThemePref): Promise<void>
   setFontScale(s: number): Promise<void>
@@ -142,6 +190,9 @@ export const useDevHub = create<DevHubState>((set, get) => ({
   ingesting: false,
   lastIngest: null,
 
+  suggested: [],
+  loadingSuggested: false,
+
   async init(api) {
     set({ api })
     const [tema, fonte] = await Promise.all([
@@ -179,7 +230,9 @@ export const useDevHub = create<DevHubState>((set, get) => ({
     try {
       const items = route.name === 'saved'
         ? await api.saved(LIMITE_FEED)
-        : await api.feed(categoriaDaRota(route), LIMITE_FEED)
+        : route.name === 'history'
+          ? await api.history(LIMITE_FEED)
+          : await api.feed(categoriaDaRota(route), LIMITE_FEED)
       set({ items, loading: false })
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e), loading: false })
@@ -251,6 +304,30 @@ export const useDevHub = create<DevHubState>((set, get) => ({
         (i) => (i.article.id === articleId ? { ...i, saved } : i),
       ),
     })
+  },
+
+  async loadSuggested() {
+    const api = get().api
+    if (!api) return
+    set({ loadingSuggested: true })
+    try {
+      set({ suggested: await api.suggestedTags(40), loadingSuggested: false })
+    } catch {
+      set({ suggested: [], loadingSuggested: false })
+    }
+  },
+
+  async toggleFollow(kind, targetId) {
+    const api = get().api
+    if (!api) return
+    const seguindo = await api.toggleFollow(kind, targetId)
+    set({
+      suggested: get().suggested.map(
+        (t) => (t.slug === targetId ? { ...t, seguindo } : t),
+      ),
+    })
+    // O follow muda o fator de afinidade, então o feed precisa ser refeito.
+    if (ehListagem(get().route)) await get().refresh()
   },
 
   async setThemePref(p) {

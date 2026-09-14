@@ -16,5 +16,7 @@
     "@devhub/db": "*",
     "@devhub/tokens": "*",
     "@devhub/state": "*"
-  }
+  },
+  "description": "Dev Hub — Technology. Code. Innovation.",
+  "author": "Dev Hub"
 }
