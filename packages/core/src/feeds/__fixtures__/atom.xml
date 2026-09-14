@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Exemplo Atom</title>
+  <entry>
+    <title>Go 1.26 chega com melhorias no GC</title>
+    <link rel="alternate" href="https://go.exemplo/1-26"/>
+    <id>tag:go.exemplo,2026:1-26</id>
+    <published>2026-09-07T10:00:00Z</published>
+    <author><name>Bruno Reis</name></author>
+    <content type="html">&lt;p&gt;Pausas menores.&lt;/p&gt;</content>
+  </entry>
+</feed>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Exemplo Tech</title>
+    <item>
+      <title>Rust 1.90 lançado</title>
+      <link>https://exemplo.dev/rust-190?utm_source=rss</link>
+      <guid>https://exemplo.dev/rust-190</guid>
+      <pubDate>Mon, 08 Sep 2026 14:30:00 GMT</pubDate>
+      <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Ana Lima</dc:creator>
+      <description>&lt;p&gt;A nova versão traz &lt;b&gt;melhorias&lt;/b&gt; no borrow checker.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Sem data nem autor</title>
+      <link>https://exemplo.dev/sem-data</link>
+    </item>
+  </channel>
+</rss>
