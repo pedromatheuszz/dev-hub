@@ -1,5 +1,6 @@
 import type { Article, Category } from '@devhub/core'
-import type { FeedItem, SourceInfo } from '@devhub/state'
+import { historico, tagsMaisUsadas, type FollowKind } from '@devhub/db'
+import type { FeedItem, SourceInfo, TagSugerida } from '@devhub/state'
 import type { Contexto } from './db.js'
 
 /**
@@ -130,6 +131,25 @@ export function listarFontes(ctx: Contexto): SourceInfo[] {
     id: s.id, name: s.name, kind: s.kind,
     trustWeight: s.trustWeight, lastFetchedAt: s.lastFetchedAt, active: s.active,
   }))
+}
+
+export function sugerirTags(ctx: Contexto, limite: number): TagSugerida[] {
+  return tagsMaisUsadas(ctx.driver, limite)
+}
+
+/** Devolve o novo estado: true se passou a seguir. */
+export function alternarFollow(
+  ctx: Contexto, kind: FollowKind, targetId: string,
+): boolean {
+  return ctx.follows.toggle(kind, targetId, 1, Date.now())
+}
+
+export function lerHistorico(ctx: Contexto, limite: number): FeedItem[] {
+  const salvos = idsSalvos(ctx)
+  return historico(ctx.driver, limite)
+    .map((h) => ctx.articles.byId(h.articleId))
+    .filter((a): a is Article => a !== undefined)
+    .map((a) => itemDoArtigo(ctx, a, salvos.has(a.id)))
 }
 
 export function lerConfig(ctx: Contexto, key: string): string | null {

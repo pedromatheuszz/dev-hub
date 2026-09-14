@@ -13,6 +13,10 @@ const devhub = {
   recordRead: (id: string) => ipcRenderer.invoke('recordRead', id),
   ingest: () => ipcRenderer.invoke('ingest'),
   sources: () => ipcRenderer.invoke('sources'),
+  suggestedTags: (limit: number) => ipcRenderer.invoke('suggestedTags', limit),
+  toggleFollow: (kind: string, targetId: string) =>
+    ipcRenderer.invoke('toggleFollow', kind, targetId),
+  history: (limit: number) => ipcRenderer.invoke('history', limit),
   getSetting: (k: string) => ipcRenderer.invoke('getSetting', k),
   setSetting: (k: string, v: string) => ipcRenderer.invoke('setSetting', k, v),
   openExternal: (url: string) => ipcRenderer.invoke('openExternal', url),

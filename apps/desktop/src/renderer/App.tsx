@@ -2,6 +2,7 @@ import { useDevHub, type Route } from '@devhub/state'
 import { useEffect, useState } from 'react'
 import { api, rotuloCategoria } from './api.js'
 import { FeedView } from './components/FeedView.js'
+import { Following } from './components/Following.js'
 import { Reader } from './components/Reader.js'
 import { SearchOverlay } from './components/SearchOverlay.js'
 import { Settings } from './components/Settings.js'
@@ -14,6 +15,7 @@ const TITULOS: Record<string, string> = {
   trending: 'Em alta',
   saved: 'Salvos',
   following: 'Seguindo',
+  history: 'Histórico de leitura',
   settings: 'Configurações',
   article: 'Artigo',
 }
@@ -33,7 +35,7 @@ const ATALHOS_NUMERICOS: Route[] = [
   { name: 'category', category: 'innovation' },
   { name: 'saved' },
   { name: 'following' },
-  { name: 'settings' },
+  { name: 'history' },
 ]
 
 export function App() {
@@ -170,15 +172,7 @@ export function App() {
           ) : rota.name === 'article' ? (
             <Reader id={rota.id} />
           ) : rota.name === 'following' ? (
-            <div className="empty">
-              <div className="empty-icon" aria-hidden="true">◎</div>
-              <div className="empty-title">Seguir tópicos chega na Fase 4</div>
-              <p className="empty-hint">
-                Aqui você vai escolher linguagens, frameworks, empresas e hardware
-                para priorizar no seu feed. O fator de afinidade do ranking já
-                está no lugar, esperando esses dados.
-              </p>
-            </div>
+            <Following />
           ) : (
             <FeedView />
           )}

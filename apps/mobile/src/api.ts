@@ -2,7 +2,8 @@ import {
   HeuristicProvider, SOURCES, runIngest, type Article, type Category,
 } from '@devhub/core'
 import {
-  ArticlesRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
+  ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
+  historico, migrate, tagsMaisUsadas,
 } from '@devhub/db'
 import { ExpoSqliteDriver } from '@devhub/db/expo'
 import type { DevHubApi, FeedItem, SourceInfo } from '@devhub/state'
@@ -23,6 +24,7 @@ const articles = new ArticlesRepo(driver)
 const stories = new StoriesRepo(driver)
 const tags = new TagsRepo(driver)
 const search = new SearchRepo(driver)
+const follows = new FollowsRepo(driver)
 
 function idsSalvos(): Set<string> {
   return new Set(
@@ -143,6 +145,22 @@ export const mobileApi: DevHubApi = {
       sources, articles, stories, tags, search,
       ai: new HeuristicProvider(),
     })
+  },
+
+  async suggestedTags(limit) {
+    return tagsMaisUsadas(driver, limit)
+  },
+
+  async toggleFollow(kind, targetId) {
+    return follows.toggle(kind, targetId, 1, Date.now())
+  },
+
+  async history(limit) {
+    const salvos = idsSalvos()
+    return historico(driver, limit)
+      .map((h) => articles.byId(h.articleId))
+      .filter((a): a is Article => a !== undefined)
+      .map((a) => itemDoArtigo(a, salvos.has(a.id)))
   },
 
   async sources(): Promise<SourceInfo[]> {

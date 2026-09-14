@@ -507,3 +507,48 @@ button { font: inherit; color: inherit; cursor: pointer; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------------------------------------------- seguindo */
+
+.follow-grid {
+  display: grid;
+  gap: var(--sp-sm);
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.follow-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-md) var(--sp-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: background 110ms ease, border-color 110ms ease;
+}
+.follow-chip:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.follow-chip.on { border-color: var(--accent); background: var(--accent-soft); }
+
+.follow-nome {
+  font-size: var(--fs-base);
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.follow-contagem {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 1px 5px;
+  background: var(--surface-alt);
+  border-radius: var(--r-pill);
+}
+.follow-acao {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.follow-chip.on .follow-acao { color: var(--accent); font-weight: 600; }

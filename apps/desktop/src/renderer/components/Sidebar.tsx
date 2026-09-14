@@ -23,6 +23,7 @@ const CATEGORIAS: Entrada[] = [
 const PESSOAL: Entrada[] = [
   { rota: { name: 'saved' }, icone: '★', texto: 'Salvos', atalho: '7' },
   { rota: { name: 'following' }, icone: '◎', texto: 'Seguindo', atalho: '8' },
+  { rota: { name: 'history' }, icone: '↺', texto: 'Histórico', atalho: '9' },
 ]
 
 function mesmaRota(a: Route, b: Route): boolean {
@@ -71,7 +72,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
       <div className="nav-group">{PESSOAL.map(item)}</div>
 
       <div className="sidebar-foot nav-group">
-        {item({ rota: { name: 'settings' }, icone: '⚙', texto: 'Configurações', atalho: '9' })}
+        {item({ rota: { name: 'settings' }, icone: '⚙', texto: 'Configurações', atalho: '0' })}
       </div>
     </nav>
   )

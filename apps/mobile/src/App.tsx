@@ -7,6 +7,7 @@ import {
 } from 'react-native'
 import { hostDe, mobileApi, rotuloTipo, tempoRelativo } from './api.js'
 import { BottomNav } from './components/BottomNav.js'
+import { Following } from './components/Following.js'
 import { StoryCard } from './components/StoryCard.js'
 import { fontSize, radius, spacing, useEhEscuro, usePalette, type Palette } from './theme.js'
 
@@ -15,6 +16,7 @@ const TITULOS: Record<string, string> = {
   latest: 'Explorar',
   saved: 'Salvos',
   following: 'Seguindo',
+  history: 'Histórico',
   settings: 'Perfil',
   article: '',
 }
@@ -180,11 +182,7 @@ export function App() {
         ) : rota.name === 'article' ? (
           <Leitor id={rota.id} p={p} />
         ) : rota.name === 'following' ? (
-          <Vazio
-            p={p}
-            titulo="Seguir tópicos chega na Fase 4"
-            dica="Aqui você vai escolher linguagens, frameworks e empresas para priorizar no feed."
-          />
+          <Following p={p} />
         ) : rota.name === 'settings' ? (
           <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
             <Text style={[e.secao, { color: p.text }]}>Tema</Text>

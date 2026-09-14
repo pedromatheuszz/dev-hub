@@ -87,7 +87,7 @@ function rodarSmokeTest(win: BrowserWindow): void {
           montou: !!raiz && raiz.children.length > 0,
           temPonte: typeof window.devhub === 'object' && window.devhub !== null,
           temSidebar: !!document.querySelector('.sidebar'),
-          temNoveItensDeNav: itens.length === 9,
+          temDezItensDeNav: itens.length === 10,
           temConfiguracoes: itens.includes('Configurações'),
           temBuscaGlobal: !!document.querySelector('.search-trigger'),
           navItens: itens,

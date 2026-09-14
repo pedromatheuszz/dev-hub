@@ -3,8 +3,8 @@ import { ipcMain, shell } from 'electron'
 import type { Contexto } from './db.js'
 import { criarPlatform } from './platform.js'
 import {
-  alternarSalvo, buscar, gravarConfig, lerConfig, listarFontes, listarSalvos,
-  montarFeed, registrarLeitura,
+  alternarFollow, alternarSalvo, buscar, gravarConfig, lerConfig, lerHistorico,
+  listarFontes, listarSalvos, montarFeed, registrarLeitura, sugerirTags,
 } from './queries.js'
 
 /** Protocolos que podem sair para o navegador do sistema. Nada mais. */
@@ -53,6 +53,18 @@ export function registrarIpc(ctx: Contexto): void {
   })
 
   ipcMain.handle('sources', () => listarFontes(ctx))
+
+  ipcMain.handle('suggestedTags', (_e, limite) =>
+    sugerirTags(ctx, validarLimite(limite, 40)))
+
+  ipcMain.handle('toggleFollow', (_e, kind, alvo) => {
+    const k = validarTexto(kind, 16)
+    if (k !== 'tag' && k !== 'category' && k !== 'source') return false
+    return alternarFollow(ctx, k, validarTexto(alvo, 100))
+  })
+
+  ipcMain.handle('history', (_e, limite) =>
+    lerHistorico(ctx, validarLimite(limite)))
 
   ipcMain.handle('getSetting', (_e, k) => lerConfig(ctx, validarTexto(k, 64)))
 

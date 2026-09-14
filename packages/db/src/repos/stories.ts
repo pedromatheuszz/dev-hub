@@ -49,11 +49,54 @@ export class StoriesRepo {
   }
 
   /**
+   * Pesos de afinidade do usuário, buscados uma vez por consulta.
+   * Sem follows cadastrados devolve mapas vazios e a afinidade fica 1.0,
+   * exatamente como antes da Fase 4.
+   */
+  private carregarAfinidade(): {
+    porTag: Map<string, number>
+    porCategoria: Map<string, number>
+    tagsPorArtigo: Map<string, Array<{ slug: string; confidence: number }>>
+  } {
+    const porTag = new Map(
+      this.db.all<{ target_id: string; weight: number }>(
+        "SELECT target_id, weight FROM follows WHERE target_kind = 'tag'",
+      ).map((r) => [r.target_id, r.weight]),
+    )
+    const porCategoria = new Map(
+      this.db.all<{ target_id: string; weight: number }>(
+        "SELECT target_id, weight FROM follows WHERE target_kind = 'category'",
+      ).map((r) => [r.target_id, r.weight]),
+    )
+
+    const tagsPorArtigo = new Map<string, Array<{ slug: string; confidence: number }>>()
+    if (porTag.size > 0) {
+      // Uma consulta só para todas as tags seguidas, em vez de uma por artigo.
+      const marcadores = [...porTag.keys()].map(() => '?').join(',')
+      for (const r of this.db.all<{ article_id: string; slug: string; confidence: number }>(
+        `SELECT at.article_id, t.slug, at.confidence
+           FROM article_tags at
+           JOIN tags t ON t.id = at.tag_id
+          WHERE t.slug IN (${marcadores})`,
+        [...porTag.keys()],
+      )) {
+        const lista = tagsPorArtigo.get(r.article_id)
+        const item = { slug: r.slug, confidence: r.confidence }
+        if (lista) lista.push(item)
+        else tagsPorArtigo.set(r.article_id, [item])
+      }
+    }
+
+    return { porTag, porCategoria, tagsPorArtigo }
+  }
+
+  /**
    * O SQL só traz os fatores; o score é calculado em TypeScript pela mesma
    * função que a UI usa. Isso garante que o número exibido no painel
    * "por que estou vendo isto" é exatamente o que ordenou a lista.
    */
   topRanked(limit: number, category: Category | null, now: number): RankedStory[] {
+    const afinidade = this.carregarAfinidade()
     const linhas = this.db.all<LinhaStory>(
       `SELECT st.*,
               sa.article_id AS primary_article_id,
@@ -87,6 +130,19 @@ export class StoriesRepo {
           lastUpdatedAt: r.last_updated_at,
           articleCount: r.article_count,
         }
+        // Afinidade: cada tag seguida que o artigo tem, mais a categoria
+        // seguida, empurram a história para cima no feed.
+        const followMatches = (afinidade.tagsPorArtigo.get(r.primary_article_id!) ?? [])
+          .map((t) => ({
+            weight: afinidade.porTag.get(t.slug) ?? 0,
+            tagConfidence: t.confidence,
+          }))
+
+        const pesoCategoria = afinidade.porCategoria.get(story.category)
+        if (pesoCategoria !== undefined) {
+          followMatches.push({ weight: pesoCategoria, tagConfidence: 0.5 })
+        }
+
         return {
           story,
           primaryArticleId: r.primary_article_id!,
@@ -96,7 +152,7 @@ export class StoriesRepo {
             category: story.category,
             trustWeight: r.trust_weight ?? 0.5,
             importance: story.importance,
-            followMatches: [], // Fase 4 preenche isto
+            followMatches,
             articleCount: story.articleCount,
           }),
         }
