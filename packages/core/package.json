@@ -13,5 +13,8 @@
   "dependencies": {
     "fast-xml-parser": "^5.11.1",
     "htmlparser2": "^12.0.0"
+  },
+  "devDependencies": {
+    "@devhub/db": "*"
   }
 }

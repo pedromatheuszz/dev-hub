@@ -27,3 +27,5 @@ export * from './rank/score.js'
 export * from './rank/breaking.js'
 
 export { SOURCES } from './sources/registry.js'
+
+export * from './ingest/pipeline.js'

@@ -64,9 +64,13 @@ export class StoriesRepo {
          LEFT JOIN articles a ON a.id = sa.article_id
          LEFT JOIN sources src ON src.id = a.source_id
         WHERE (:cat IS NULL OR st.category = :cat)
-        ORDER BY st.last_updated_at DESC
+        -- Por published_at do artigo primário, NÃO por last_updated_at:
+        -- este último é o mesmo para toda história gravada na mesma
+        -- rodada de ingestão, então empatava tudo e a pré-seleção devolvia
+        -- um subconjunto arbitrário — o score reordenava a lista errada.
+        ORDER BY COALESCE(a.published_at, st.first_seen_at) DESC
         LIMIT :lim`,
-      { cat: category, lim: limit * 4 }, // folga: reordenamos em memória
+      { cat: category, lim: limit * 8 }, // folga: reordenamos em memória
     )
 
     return linhas

@@ -21,6 +21,18 @@ export const JACCARD_CINZA = 0.2
  */
 export const MAX_PARES_CINZA = 50
 
+/**
+ * Janela máxima entre dois artigos da mesma história.
+ *
+ * Uma "história" é um EVENTO no tempo. Sem esta guarda, títulos
+ * formulaicos destroem o agrupamento: "Node.js 6.11.3 (LTS)" e
+ * "Node.js 10.16.1 (LTS)" diferem só em dígitos, e o union-find encadeia
+ * transitivamente uma década inteira de anúncios de release numa
+ * "história" só — medido: 200 artigos num cluster.
+ */
+export const JANELA_CLUSTER_HORAS = 72
+const MS_POR_HORA = 3_600_000
+
 export interface ClusterInput {
   id: string
   title: string
@@ -67,6 +79,11 @@ export function clusterArticles(items: ClusterInput[]): Cluster[] {
 
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
+      // Fora da janela de tempo, nem é considerado: eventos diferentes.
+      const distanciaHoras =
+        Math.abs(items[i]!.publishedAt - items[j]!.publishedAt) / MS_POR_HORA
+      if (distanciaHoras > JANELA_CLUSTER_HORAS) continue
+
       const dist = hamming(items[i]!.simhash, items[j]!.simhash)
       const sim = jaccard(tri[i]!, tri[j]!)
 

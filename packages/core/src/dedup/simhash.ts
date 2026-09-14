@@ -16,7 +16,11 @@ export function tokenize(text: string): string[] {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // remove acentos
-    .replace(/[^a-z0-9]+/g, ' ')
+    // Preserva números de versão como UM token. Sem isto, "6.11.3" virava
+    // ["11"] — o ponto virava separador e "6" e "3" caíam no filtro de
+    // tamanho, jogando fora exatamente o que distingue um release do outro.
+    .replace(/(\d)\.(?=\d)/g, '$1_')
+    .replace(/[^a-z0-9_]+/g, ' ')
     .split(' ')
     .filter((t) => t.length > 1)
 }
