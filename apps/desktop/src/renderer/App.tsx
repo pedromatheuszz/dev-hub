@@ -63,6 +63,12 @@ export function App() {
 
   useEffect(() => { void init(api).then(() => setPronto(true)) }, [init])
 
+  // A ingestão automática das 5h avisa por IPC; o feed se atualiza sozinho.
+  useEffect(() => {
+    window.devhub.aoIngestaoAutomatica?.(() => void refresh())
+    window.devhub.aoAbrirArtigo?.((id) => void navigate({ name: 'article', id }))
+  }, [refresh, navigate])
+
   // Tema: reaplica quando a preferência muda e quando o Windows troca de tema.
   useEffect(() => {
     aplicarTema(themePref, fontScale)

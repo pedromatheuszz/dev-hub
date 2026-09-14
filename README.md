@@ -121,7 +121,7 @@ Oito mecanismos protegem a cota gratuita:
 | 3 | Pré-filtro heurístico corta o que está fora de escopo antes de gastar |
 | 4 | Governador de cota com 20% de margem, restaurado do banco ao reiniciar |
 | 5 | Backoff exponencial com jitter em 429 e 5xx |
-| 6 | Ingestão em janelas agendadas, 3-4× ao dia |
+| 6 | Ingestão automática uma vez por dia, às 5h |
 | 7 | Degradação para heurística: sem chave, sem cota ou sem internet, o app segue inteiro |
 | 8 | Painel de consumo com requisições e tokens do dia |
 
@@ -195,15 +195,48 @@ quebra o build se alguém escurecer um texto além do permitido.
 
 ---
 
+## Atualização automática
+
+O Dev Hub busca as notícias **todo dia às 5h da manhã**, para o feed já estar
+pronto quando você acorda. Dá para desligar em Configurações.
+
+**No desktop**, um batimento de 10 minutos verifica se a janela das 5h foi
+cruzada. É deliberadamente um batimento, e não um `setTimeout` de horas: um
+temporizador longo não sobrevive à suspensão do notebook — o relógio avança e
+ele simplesmente não dispara. Com o batimento, se o computador estiver
+desligado às 5h, a busca acontece na primeira vez que você abrir o app depois
+disso.
+
+**No Android**, a tarefa roda em segundo plano. Aqui vale uma ressalva honesta:
+**o Android não garante horário exato** — o sistema decide quando acordar a
+tarefa, conforme bateria, rede e uso do aparelho. O que o app garante é que,
+na primeira oportunidade depois das 5h, a ingestão roda; e que ela roda também
+quando você abre o app, se a janela tiver passado em branco.
+
+O botão "Buscar agora" ignora a janela e roda na hora, sempre.
+
+---
+
 ## Limitações conhecidas
 
-1. **As tags têm ruído.** Um artigo sobre CPU da AMD pode receber `intel`
-   junto. É o teto do casamento por dicionário; a camada de IA corrige quando
-   configurada.
-2. **Releases próximos ainda agrupam.** `Node.js 26.8.0` e `26.8.1`, publicados
-   com dias de diferença, entram na mesma história. A janela de 72h é
-   deliberada; a IA resolve esses casos de fronteira.
-3. **O instalador não é assinado.** Aviso do SmartScreen na primeira execução.
-4. **Não há sincronização entre dispositivos.** Desktop e Android têm bancos
+1. **O instalador não é assinado.** Certificado de assinatura é pago, então o
+   Windows mostra o aviso do SmartScreen na primeira execução.
+2. **Não há sincronização entre dispositivos.** Desktop e Android têm bancos
    independentes. As fronteiras do código permitem acrescentar isso sem
    reescrita.
+3. **Duplicatas entre fontes diferentes são raras neste acervo.** As 37 fontes
+   publicam sobretudo conteúdo próprio, então o agrupamento de histórias quase
+   não dispara hoje. Ele existe e é testado — passa a importar quando várias
+   publicações cobrirem o mesmo evento.
+
+### Corrigidas
+
+- ~~Tags com ruído~~ — um artigo sobre CPU da AMD recebia `intel`. Medido:
+  1542 de 2707 tags (57%) vinham de **menção única** no corpo, e eram coisas
+  como `linux` num artigo sobre a primeira pilha elétrica. O corpo passou a
+  contar **ocorrências** em vez de termos distintos, com limiar de confiança.
+  Resultado: 0 tags fracas.
+- ~~Releases próximos agrupavam~~ — `Node.js 26.8.0` e `26.8.1` viravam a mesma
+  história, assim como `Linux 7.3-rc3`/`rc4` e `Python 3.15.0 alpha 4`/`5`.
+  Agora versões diferentes no título nunca viram o mesmo evento, por mais
+  parecidos que sejam os títulos. Resultado: 0 agrupamentos falsos.

@@ -10,6 +10,9 @@ import { ExpoSqliteDriver } from '@devhub/db/expo'
 import type { DevHubApi, FeedItem, SourceInfo } from '@devhub/state'
 import { dispararNotificacoes, estadoVazio, type EstadoNotifMobile } from './notify.js'
 import { mobilePlatform } from './platform.js'
+import {
+  cancelarTarefaDeFundo, msAteProximaJanela, registrarTarefaDeFundo, verificarAoAbrir,
+} from './scheduler.js'
 
 /**
  * No Android não há processo separado: o mesmo núcleo que roda no processo
@@ -32,6 +35,8 @@ const usage = new UsageRepo(driver)
 const CHAVE_MODELO = 'ai_model'
 const CHAVE_NOTIF_PREFS = 'notificacoes'
 const CHAVE_NOTIF_ESTADO = 'notif_estado'
+const CHAVE_ULTIMA_INGESTAO = 'ultima_ingestao'
+const CHAVE_AUTO = 'ingestao_automatica'
 
 function lerConfig(k: string): string | null {
   return driver.get<{ value: string }>(
@@ -179,8 +184,36 @@ export const mobileApi: DevHubApi = {
       sources, articles, stories, tags, search,
       ai: provider,
     })
+    gravarConfig(CHAVE_ULTIMA_INGESTAO, String(Date.now()))
     await notificar(relatorio.idsNovos)
     return relatorio
+  },
+
+  async scheduleStatus() {
+    const bruto = lerConfig(CHAVE_ULTIMA_INGESTAO)
+    const n = bruto ? Number(bruto) : NaN
+    return {
+      automatica: lerConfig(CHAVE_AUTO) !== 'off',
+      ultimaIngestao: Number.isFinite(n) ? n : null,
+      proximaEm: msAteProximaJanela(Date.now()),
+      horaDaJanela: 5,
+    }
+  },
+
+  async setAutoIngest(ligada) {
+    gravarConfig(CHAVE_AUTO, ligada ? 'on' : 'off')
+    if (ligada) {
+      await registrarTarefaDeFundo(
+        async () => mobileApi.ingest(),
+        () => {
+          const b = lerConfig(CHAVE_ULTIMA_INGESTAO)
+          const v = b ? Number(b) : NaN
+          return Number.isFinite(v) ? v : null
+        },
+      )
+    } else {
+      await cancelarTarefaDeFundo()
+    }
   },
 
   async notifPrefs() {
@@ -272,6 +305,23 @@ export const mobileApi: DevHubApi = {
     const { openBrowserAsync } = await import('expo-web-browser')
     await openBrowserAsync(url)
   },
+}
+
+/**
+ * Liga a ingestão automática: registra a tarefa de fundo e verifica na hora
+ * se a janela das 5h passou sem ela rodar.
+ */
+export async function iniciarAgendamento(): Promise<boolean> {
+  const lerUltima = () => {
+    const b = lerConfig(CHAVE_ULTIMA_INGESTAO)
+    const v = b ? Number(b) : NaN
+    return Number.isFinite(v) ? v : null
+  }
+
+  if (lerConfig(CHAVE_AUTO) === 'off') return false
+
+  await registrarTarefaDeFundo(async () => mobileApi.ingest(), lerUltima)
+  return verificarAoAbrir(async () => mobileApi.ingest(), lerUltima())
 }
 
 /** Dispara as notificações locais depois de uma ingestão. */

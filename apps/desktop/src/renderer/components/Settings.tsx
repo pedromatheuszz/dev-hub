@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { api, tempoRelativo } from '../api.js'
 import { AiSettings } from './AiSettings.js'
 import { NotifSettings } from './NotifSettings.js'
+import { ScheduleSettings } from './ScheduleSettings.js'
 
 const TEMAS: Array<[ThemePref, string]> = [
   ['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro'],
@@ -82,6 +83,8 @@ export function Settings() {
           {ingesting ? <><span className="spin">◌</span> Buscando…</> : 'Buscar agora'}
         </button>
       </div>
+
+      <ScheduleSettings />
 
       <AiSettings />
 

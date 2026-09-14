@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { BrowserWindow, app, nativeTheme, shell } from 'electron'
 import { abrirBanco, fecharBanco } from './db.js'
 import { registrarIpc } from './ipc.js'
+import { iniciarAgendador, pararAgendador } from './scheduler.js'
 
 const ehDev = !app.isPackaged
 
@@ -144,8 +145,15 @@ function capturarTela(win: BrowserWindow, destino: string, rota?: string): void 
 }
 
 app.whenReady().then(() => {
-  registrarIpc(abrirBanco())
+  const ctx = abrirBanco()
+  registrarIpc(ctx)
   const win = criarJanela()
+
+  // Ingestão automática diária às 5h (spec §6.4, mecanismo 6).
+  // O smoke test e a captura de tela não devem disparar rede.
+  const ehVerificacao = process.argv.includes('--smoke')
+    || process.argv.includes('--screenshot')
+  if (!ehVerificacao) iniciarAgendador(ctx)
 
   if (process.argv.includes('--smoke')) rodarSmokeTest(win)
 
@@ -162,6 +170,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  pararAgendador()
   fecharBanco()
   if (process.platform !== 'darwin') app.quit()
 })

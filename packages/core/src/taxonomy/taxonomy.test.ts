@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categoryOf, contentTypeOf, tagsOf } from './classify.js'
+import { CONFIANCA_MINIMA_TAG, categoryOf, contentTypeOf, tagsOf } from './classify.js'
 import { TAG_DICTIONARY } from './dictionary.js'
 
 describe('TAG_DICTIONARY', () => {
@@ -26,18 +26,54 @@ describe('tagsOf', () => {
     const tags = tagsOf('Rust 1.90 lançado', 'Novidades do compilador')
     expect(tags.map((t) => t.slug)).toContain('rust')
   })
-  it('encontra framework e linguagem juntos', () => {
-    const slugs = tagsOf('React 20 com novo compilador', 'Escrito em TypeScript')
-      .map((t) => t.slug)
+  it('encontra framework e linguagem quando ambos tem sinal forte', () => {
+    const slugs = tagsOf(
+      'React 20 com novo compilador',
+      'Escrito em TypeScript. O TypeScript novo tipa melhor. Veja o typescript.',
+    ).map((t) => t.slug)
     expect(slugs).toContain('react')
     expect(slugs).toContain('typescript')
+  })
+
+  // Medido sobre 2707 tags reais: mencao unica no corpo era 57% do total e
+  // quase tudo ruido - "linux" num artigo sobre a primeira pilha eletrica,
+  // "windows" num sobre DynamoDB, "cpu" num sobre texto alternativo.
+  it('descarta mencao de passagem unica no corpo', () => {
+    const slugs = tagsOf(
+      'AMD lanca o melhor CPU para jogos',
+      'O Ryzen 9850X3D lidera nossos jogos, um pouco acima do concorrente Intel.',
+    ).map((t) => t.slug)
+    expect(slugs).toContain('amd')
+    expect(slugs).toContain('cpu')
+    expect(slugs).not.toContain('intel')
+  })
+
+  it('duas mencoes no corpo bastam para valer a tag', () => {
+    const slugs = tagsOf(
+      'Rodando containers em producao',
+      'Usamos docker e podman lado a lado no cluster.',
+    ).map((t) => t.slug)
+    expect(slugs).toContain('docker')
+  })
+
+  it('nenhuma tag fica abaixo do limiar de confianca', () => {
+    for (const t of tagsOf('Kubernetes e Docker', 'Falamos de python e rust tambem')) {
+      expect(t.confidence).toBeGreaterThanOrEqual(CONFIANCA_MINIMA_TAG)
+    }
   })
   it('dá confiança maior para acerto no título', () => {
     const noTitulo = tagsOf('Kubernetes escala melhor', 'texto neutro')
       .find((t) => t.slug === 'kubernetes')!
-    const noCorpo = tagsOf('Texto neutro', 'Kubernetes escala melhor')
+    const noCorpo = tagsOf('Texto neutro', 'Kubernetes escala. O kubernetes ajuda.')
       .find((t) => t.slug === 'kubernetes')!
     expect(noTitulo.confidence).toBeGreaterThan(noCorpo.confidence)
+  })
+
+  it('repetição no corpo eleva a confiança', () => {
+    const uma = tagsOf('Artigo neutro', 'Falamos de rust aqui. E de outras coisas.')
+    const varias = tagsOf('Artigo neutro', 'rust rust rust e mais rust no projeto')
+    expect(uma.find((t) => t.slug === 'rust')).toBeUndefined()
+    expect(varias.find((t) => t.slug === 'rust')!.confidence).toBeGreaterThanOrEqual(0.5)
   })
   it('ordena por confiança decrescente', () => {
     const tags = tagsOf('NVIDIA GPU nova', 'A GPU da NVIDIA usa CUDA e roda Python')

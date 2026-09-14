@@ -3,9 +3,24 @@ import type { Category, ContentType } from '../types.js'
 import { TAG_DICTIONARY } from './dictionary.js'
 
 const PESO_TITULO = 3
-const PESO_CORPO = 1
+/** Teto da contribuição do corpo, para um termo repetido 30x não dominar. */
+const TETO_CORPO = 3
 /** Normalizador: acerto de título único já dá confiança respeitável. */
 const SATURACAO = 6
+
+/**
+ * Confiança mínima para uma tag valer.
+ *
+ * Medido em artigos reais, UMA ocorrência no corpo é exatamente a
+ * assinatura do ruído, e tudo que é legítimo aparece duas ou mais vezes:
+ *
+ *   "AMD's best gaming CPU"      ryzen x8, amd x4, cpu x2 | intel x1, testing x1
+ *   "Chrome to ARM64 Linux"      chrome x13, linux x5, arm x3 | windows x1
+ *
+ * Antes deste limiar, 1542 de 2707 tags (57%) vinham de menção única — e
+ * eram coisas como "linux" num artigo sobre a primeira pilha elétrica.
+ */
+export const CONFIANCA_MINIMA_TAG = 0.3
 
 /** Índice termo -> slugs, montado uma vez. */
 const INDICE = new Map<string, string[]>()
@@ -23,25 +38,36 @@ export function tagsOf(
   title: string,
   text: string,
 ): Array<{ slug: string; confidence: number }> {
-  const pontos = new Map<string, number>()
+  const doTitulo = new Map<string, number>()
+  const doCorpo = new Map<string, number>()
 
   // tokenize() já quebra em palavras inteiras, então "governo" nunca
   // casa com o termo "go" — o casamento é por token, não por substring.
   const tokensTitulo = new Set(tokenize(title))
   for (const token of tokensTitulo) {
     for (const slug of INDICE.get(token) ?? []) {
-      pontos.set(slug, (pontos.get(slug) ?? 0) + PESO_TITULO)
-    }
-  }
-  for (const token of new Set(tokenize(text))) {
-    if (tokensTitulo.has(token)) continue
-    for (const slug of INDICE.get(token) ?? []) {
-      pontos.set(slug, (pontos.get(slug) ?? 0) + PESO_CORPO)
+      doTitulo.set(slug, (doTitulo.get(slug) ?? 0) + PESO_TITULO)
     }
   }
 
-  return [...pontos.entries()]
-    .map(([slug, p]) => ({ slug, confidence: Math.min(1, p / SATURACAO) }))
+  // No corpo contamos OCORRÊNCIAS, não termos distintos: é a repetição que
+  // separa o assunto do artigo de uma comparação de passagem.
+  for (const token of tokenize(text)) {
+    if (tokensTitulo.has(token)) continue
+    for (const slug of INDICE.get(token) ?? []) {
+      doCorpo.set(slug, (doCorpo.get(slug) ?? 0) + 1)
+    }
+  }
+
+  const slugs = new Set([...doTitulo.keys(), ...doCorpo.keys()])
+
+  return [...slugs]
+    .map((slug) => {
+      const pontos = (doTitulo.get(slug) ?? 0)
+        + Math.min(TETO_CORPO, doCorpo.get(slug) ?? 0)
+      return { slug, confidence: Math.min(1, pontos / SATURACAO) }
+    })
+    .filter((t) => t.confidence >= CONFIANCA_MINIMA_TAG)
     .sort((a, b) => b.confidence - a.confidence || a.slug.localeCompare(b.slug))
 }
 

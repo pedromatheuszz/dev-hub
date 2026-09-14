@@ -1,4 +1,4 @@
-import { runIngest, type Category } from '@devhub/core'
+import type { Category } from '@devhub/core'
 import { ipcMain, shell } from 'electron'
 import type { Contexto } from './db.js'
 import {
@@ -6,6 +6,9 @@ import {
 } from './ai.js'
 import { gravarPreferencias, lerPreferencias, notificarApos } from './notify.js'
 import { criarPlatform } from './platform.js'
+import {
+  definirIngestaoAutomatica, executarIngestao, lerStatus,
+} from './scheduler.js'
 import {
   alternarFollow, alternarSalvo, buscar, gravarConfig, lerConfig, lerHistorico,
   listarFontes, listarSalvos, montarFeed, registrarLeitura, sugerirTags,
@@ -76,19 +79,13 @@ export function registrarIpc(ctx: Contexto): void {
     gravarConfig(ctx, validarTexto(k, 64), validarTexto(v, 2000))
   })
 
-  ipcMain.handle('ingest', async () => {
-    const relatorio = await runIngest({
-      platform: criarPlatform(ctx),
-      sources: ctx.sources,
-      articles: ctx.articles,
-      stories: ctx.stories,
-      tags: ctx.tags,
-      search: ctx.search,
-      // Gemini quando há chave configurada; heurística caso contrário.
-      ai: await providerParaIngestao(ctx),
-    })
-    notificarApos(ctx, relatorio.idsNovos)
-    return relatorio
+  // Ingestão manual: sempre roda, ignorando a janela das 5h.
+  ipcMain.handle('ingest', async () => executarIngestao(ctx))
+
+  ipcMain.handle('scheduleStatus', () => lerStatus(ctx))
+
+  ipcMain.handle('setAutoIngest', (_e, ligada) => {
+    definirIngestaoAutomatica(ctx, Boolean(ligada))
   })
 
   ipcMain.handle('notifPrefs', () => lerPreferencias(ctx))

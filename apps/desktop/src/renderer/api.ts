@@ -2,7 +2,15 @@ import type { DevHubApi } from '@devhub/state'
 
 declare global {
   interface Window {
-    devhub: DevHubApi
+    /**
+     * O bridge tem os métodos do DevHubApi mais dois ouvintes de evento,
+     * que não fazem parte do contrato compartilhado com o mobile porque
+     * só o Electron tem IPC.
+     */
+    devhub: DevHubApi & {
+      aoIngestaoAutomatica?: (cb: () => void) => void
+      aoAbrirArtigo?: (cb: (id: string) => void) => void
+    }
   }
 }
 

@@ -6,8 +6,15 @@
  * e é suficiente para notícias: nenhum feed publica de minuto em minuto.
  */
 
-/** Horas do dia (local) em que vale a pena buscar novidades. */
-export const JANELAS_PADRAO = [8, 13, 18, 22]
+/**
+ * Horas do dia (local) em que a ingestão automática roda.
+ *
+ * Uma janela só, às 5 da manhã: o feed já está pronto quando você acorda,
+ * a rede está ociosa, e no Android a sincronização cai numa hora em que o
+ * aparelho quase sempre está carregando. Atualizar manualmente pelo botão
+ * continua disponível a qualquer momento.
+ */
+export const JANELAS_PADRAO = [5]
 
 export const INTERVALO_MINIMO_MS = 90 * 60_000
 

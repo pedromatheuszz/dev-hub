@@ -56,6 +56,13 @@ export interface PrefsNotificacao {
   intervaloMinimoMs: number
 }
 
+export interface StatusAgendamento {
+  automatica: boolean
+  ultimaIngestao: number | null
+  proximaEm: number
+  horaDaJanela: number
+}
+
 export interface ModeloIA {
   id: string
   name: string
@@ -89,6 +96,8 @@ export interface DevHubApi {
   setAiModel(model: string): Promise<void>
   notifPrefs(): Promise<PrefsNotificacao>
   setNotifPrefs(p: Partial<PrefsNotificacao>): Promise<void>
+  scheduleStatus(): Promise<StatusAgendamento>
+  setAutoIngest(ligada: boolean): Promise<void>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
   openExternal(url: string): Promise<void>

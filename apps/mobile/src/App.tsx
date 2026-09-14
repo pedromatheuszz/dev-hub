@@ -5,7 +5,7 @@ import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native'
-import { hostDe, mobileApi, rotuloTipo, tempoRelativo } from './api.js'
+import { hostDe, iniciarAgendamento, mobileApi, rotuloTipo, tempoRelativo } from './api.js'
 import { AiSettings } from './components/AiSettings.js'
 import { BottomNav } from './components/BottomNav.js'
 import { Following } from './components/Following.js'
@@ -138,7 +138,15 @@ export function App() {
   const escuro = useEhEscuro(themePref)
   const [pronto, setPronto] = useState(false)
 
-  useEffect(() => { void init(mobileApi).then(() => setPronto(true)) }, [init])
+  useEffect(() => {
+    void init(mobileApi).then(async () => {
+      setPronto(true)
+      // Ingestão automática das 5h: registra a tarefa de fundo e cobre o
+      // caso do Android não ter acordado o app durante a janela.
+      const rodou = await iniciarAgendamento()
+      if (rodou) await useDevHub.getState().refresh()
+    })
+  }, [init])
 
   function navegar(r: Route) {
     if (r.name !== 'latest') setSearchQuery('')

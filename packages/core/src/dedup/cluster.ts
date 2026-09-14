@@ -1,5 +1,5 @@
 import { jaccard, trigrams } from './jaccard.js'
-import { hamming } from './simhash.js'
+import { hamming, tokenize } from './simhash.js'
 
 export const HAMMING_MESMO = 3
 export const HAMMING_CINZA = 12
@@ -32,6 +32,53 @@ export const MAX_PARES_CINZA = 50
  */
 export const JANELA_CLUSTER_HORAS = 72
 const MS_POR_HORA = 3_600_000
+
+/**
+ * Reconhece token de versão: `26_8_1`, `v12`, `rc3`, `beta2`.
+ * O `_` vem do tokenize, que preserva o ponto entre dígitos.
+ */
+const TOKEN_VERSAO = /^(v\d+|\d+(_\d+)+|(rc|beta|alpha|pre|preview|dev|m)\d+)$/
+
+/**
+ * Palavras que qualificam um release e vêm seguidas do número, separadas
+ * por espaço: "alpha 4", "candidate 2", "beta 3". Sem isto, "Python 3.15.0
+ * alpha 4" e "alpha 5" ficavam com o mesmo conjunto de versões — o "4" e o
+ * "5" soltos não são reconhecidos como versão sozinhos.
+ */
+const QUALIFICADOR_COM_NUMERO =
+  /\b(alpha|beta|rc|candidate|preview|patch|build|milestone)\s+(\d+)\b/g
+
+export function versoesNoTitulo(titulo: string): Set<string> {
+  const saida = new Set(tokenize(titulo).filter((t) => TOKEN_VERSAO.test(t)))
+
+  // Feito sobre o texto, não sobre os tokens: o tokenize descarta tokens de
+  // um caractere, então o "4" de "alpha 4" nunca chegaria aqui.
+  const normalizado = titulo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  for (const m of normalizado.matchAll(QUALIFICADOR_COM_NUMERO)) {
+    saida.add(`${m[1]}_${m[2]}`)
+  }
+  return saida
+}
+
+/**
+ * Dois artigos que citam versões DIFERENTES são eventos diferentes, por mais
+ * parecidos que os títulos sejam.
+ *
+ * Sem isto, "Node.js 26.8.0" e "26.8.1" viravam a mesma história — títulos
+ * quase idênticos, publicados com dias de diferença. O mesmo valia para
+ * "Linux 7.3-rc3" e "7.3-rc4", e para a cadeia de guias de migração
+ * "v12 to v14" / "v14 to v16" / "v16 to v18".
+ *
+ * A regra só decide quando AMBOS citam versão. Se um deles não cita, cai na
+ * comparação normal de similaridade — senão "Rust 1.90 lançado" nunca
+ * agruparia com "Rust lança nova versão".
+ */
+export function versoesConflitam(a: Set<string>, b: Set<string>): boolean {
+  if (a.size === 0 || b.size === 0) return false
+  if (a.size !== b.size) return true
+  for (const v of a) if (!b.has(v)) return true
+  return false
+}
 
 export interface ClusterInput {
   id: string
@@ -75,6 +122,7 @@ export function clusterArticles(items: ClusterInput[]): Cluster[] {
 
   const uniao = criarUniao(items.length)
   const tri = items.map((i) => trigrams(i.title))
+  const versoes = items.map((i) => versoesNoTitulo(i.title))
   const candidatos: Array<{ par: [string, string]; sim: number }> = []
 
   for (let i = 0; i < items.length; i++) {
@@ -86,6 +134,14 @@ export function clusterArticles(items: ClusterInput[]): Cluster[] {
 
       const dist = hamming(items[i]!.simhash, items[j]!.simhash)
       const sim = jaccard(tri[i]!, tri[j]!)
+
+      // Versões diferentes = releases diferentes, por mais parecido que seja
+      // o título. Fica como par duvidoso para a IA, mas nunca vira a mesma
+      // história por semelhança lexical.
+      if (versoesConflitam(versoes[i]!, versoes[j]!)) {
+        if (sim >= JACCARD_CINZA) candidatos.push({ par: [items[i]!.id, items[j]!.id], sim })
+        continue
+      }
 
       if (dist <= HAMMING_MESMO || sim >= JACCARD_MESMO) {
         uniao.unir(i, j)

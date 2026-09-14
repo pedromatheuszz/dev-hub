@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { INTERVALO_MINIMO_MS, decidirIngestao, msAteProximaJanela } from './schedule.js'
+import {
+  INTERVALO_MINIMO_MS, JANELAS_PADRAO, decidirIngestao, msAteProximaJanela,
+} from './schedule.js'
 
 /** Constrói um instante local no dia 14/09/2026, para o teste ser determinístico. */
 function em(hora: number, minuto = 0): number {
@@ -7,7 +9,13 @@ function em(hora: number, minuto = 0): number {
   return d.getTime()
 }
 
-const JANELAS = [8, 13, 18, 22]
+const JANELAS = [5] // a janela real do Dev Hub
+
+describe('a janela padrao', () => {
+  it('e uma so, as 5h', () => {
+    expect(JANELAS_PADRAO).toEqual([5])
+  })
+})
 
 describe('decidirIngestao', () => {
   it('sempre ingere na primeira vez', () => {
@@ -16,29 +24,34 @@ describe('decidirIngestao', () => {
     expect(d.motivo).toBe('primeira_vez')
   })
 
-  it('não ingere logo após uma ingestão', () => {
-    const d = decidirIngestao(em(13, 10), em(13, 5), JANELAS)
+  it('nao ingere logo apos uma ingestao', () => {
+    const d = decidirIngestao(em(5, 10), em(5, 5), JANELAS)
     expect(d.deveIngerir).toBe(false)
     expect(d.motivo).toBe('muito_recente')
   })
 
-  it('ingere quando uma janela foi cruzada', () => {
-    // Última às 07h, agora 13h30: cruzou as janelas de 8h e 13h.
-    const d = decidirIngestao(em(13, 30), em(7), JANELAS)
+  it('ingere quando a janela das 5h foi cruzada', () => {
+    const d = decidirIngestao(em(7), em(3), JANELAS)
     expect(d.deveIngerir).toBe(true)
     expect(d.motivo).toBe('janela_atingida')
   })
 
-  it('não ingere entre janelas', () => {
-    // Última às 13h05, agora 15h: passou do intervalo mínimo mas não cruzou janela.
-    const d = decidirIngestao(em(15), em(13, 5), JANELAS)
+  it('ingere ao abrir de manha se o app passou a noite fechado', () => {
+    const ontemAs21 = em(21) - 86_400_000
+    const d = decidirIngestao(em(9), ontemAs21, JANELAS)
+    expect(d.deveIngerir).toBe(true)
+    expect(d.motivo).toBe('janela_atingida')
+  })
+
+  it('nao ingere de novo no mesmo dia depois de ja ter rodado as 5h', () => {
+    const d = decidirIngestao(em(15), em(5, 10), JANELAS)
     expect(d.deveIngerir).toBe(false)
     expect(d.motivo).toBe('fora_da_janela')
   })
 
   it('o intervalo mínimo tem precedência sobre a janela', () => {
-    // Cruzaria a janela das 13h, mas faz só 10 minutos da última ingestão.
-    const d = decidirIngestao(em(13, 5), em(12, 55), JANELAS)
+    // Cruzaria a janela das 5h, mas faz so 10 minutos da ultima ingestao.
+    const d = decidirIngestao(em(5, 5), em(4, 55), JANELAS)
     expect(d.deveIngerir).toBe(false)
     expect(d.motivo).toBe('muito_recente')
   })
@@ -49,13 +62,12 @@ describe('decidirIngestao', () => {
 })
 
 describe('msAteProximaJanela', () => {
-  it('aponta para a próxima janela do mesmo dia', () => {
-    expect(msAteProximaJanela(em(10), JANELAS)).toBe(3 * 3_600_000)
+  it('aponta para as 5h de amanha quando ja passou', () => {
+    expect(msAteProximaJanela(em(10), JANELAS)).toBe(19 * 3_600_000)
   })
 
-  it('vira para o dia seguinte depois da última janela', () => {
-    // 23h -> próxima é 8h do dia seguinte: 9 horas.
-    expect(msAteProximaJanela(em(23), JANELAS)).toBe(9 * 3_600_000)
+  it('aponta para as 5h de hoje quando ainda nao chegou', () => {
+    expect(msAteProximaJanela(em(3), JANELAS)).toBe(2 * 3_600_000)
   })
 
   it('é sempre positivo', () => {
