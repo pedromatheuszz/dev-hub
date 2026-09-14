@@ -1,0 +1,15 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Exemplo JSON",
+  "items": [
+    {
+      "id": "42",
+      "url": "https://json.exemplo/post",
+      "title": "TypeScript 6 em beta",
+      "date_published": "2026-09-06T08:15:00Z",
+      "authors": [{ "name": "Carla Souza" }],
+      "content_html": "<p>Inferência mais rápida.</p>",
+      "image": "https://json.exemplo/capa.png"
+    }
+  ]
+}
