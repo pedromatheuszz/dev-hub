@@ -1,6 +1,6 @@
 import {
-  CHAVE_SECRETA_GEMINI, SOURCES, montarProvider, runIngest,
-  type Article, type Category,
+  CHAVE_SECRETA_GEMINI, PREFERENCIAS_PADRAO, SOURCES, montarProvider, runIngest,
+  type Article, type Category, type PreferenciasNotificacao, type Story,
 } from '@devhub/core'
 import {
   ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
@@ -8,6 +8,7 @@ import {
 } from '@devhub/db'
 import { ExpoSqliteDriver } from '@devhub/db/expo'
 import type { DevHubApi, FeedItem, SourceInfo } from '@devhub/state'
+import { dispararNotificacoes, estadoVazio, type EstadoNotifMobile } from './notify.js'
 import { mobilePlatform } from './platform.js'
 
 /**
@@ -29,6 +30,8 @@ const follows = new FollowsRepo(driver)
 const usage = new UsageRepo(driver)
 
 const CHAVE_MODELO = 'ai_model'
+const CHAVE_NOTIF_PREFS = 'notificacoes'
+const CHAVE_NOTIF_ESTADO = 'notif_estado'
 
 function lerConfig(k: string): string | null {
   return driver.get<{ value: string }>(
@@ -171,11 +174,28 @@ export const mobileApi: DevHubApi = {
 
   async ingest() {
     const { provider } = await providerAtual()
-    return runIngest({
+    const relatorio = await runIngest({
       platform: mobilePlatform,
       sources, articles, stories, tags, search,
       ai: provider,
     })
+    await notificar(relatorio.idsNovos)
+    return relatorio
+  },
+
+  async notifPrefs() {
+    const bruto = lerConfig(CHAVE_NOTIF_PREFS)
+    if (!bruto) return PREFERENCIAS_PADRAO
+    try {
+      return { ...PREFERENCIAS_PADRAO, ...JSON.parse(bruto) as Partial<PreferenciasNotificacao> }
+    } catch {
+      return PREFERENCIAS_PADRAO
+    }
+  },
+
+  async setNotifPrefs(p) {
+    const atual = await mobileApi.notifPrefs()
+    gravarConfig(CHAVE_NOTIF_PREFS, JSON.stringify({ ...atual, ...p }))
   },
 
   async aiState() {
@@ -252,6 +272,41 @@ export const mobileApi: DevHubApi = {
     const { openBrowserAsync } = await import('expo-web-browser')
     await openBrowserAsync(url)
   },
+}
+
+/** Dispara as notificações locais depois de uma ingestão. */
+async function notificar(idsNovos: string[]): Promise<void> {
+  if (idsNovos.length === 0) return
+
+  const agora = Date.now()
+  const prefs = await mobileApi.notifPrefs()
+
+  const seguidas = new Set(
+    driver.all<{ target_id: string }>(
+      "SELECT target_id FROM follows WHERE target_kind = 'tag'",
+    ).map((r) => r.target_id),
+  )
+
+  const candidatas: Array<{ story: Story; articleId: string; tagsSeguidas: string[] }> = []
+  for (const id of idsNovos) {
+    const a = articles.byId(id)
+    if (!a?.storyId) continue
+    const item = itemDoArtigo(a, false)
+    candidatas.push({
+      story: item.story,
+      articleId: id,
+      tagsSeguidas: tags.tagsFor(id).filter((t) => seguidas.has(t)),
+    })
+  }
+
+  let anterior: EstadoNotifMobile = estadoVazio(agora)
+  const bruto = lerConfig(CHAVE_NOTIF_ESTADO)
+  if (bruto) {
+    try { anterior = JSON.parse(bruto) as EstadoNotifMobile } catch { /* usa o vazio */ }
+  }
+
+  const { enviadas, estado } = await dispararNotificacoes(candidatas, prefs, anterior, agora)
+  if (enviadas > 0) gravarConfig(CHAVE_NOTIF_ESTADO, JSON.stringify(estado))
 }
 
 export function tempoRelativo(ts: number, agora = Date.now()): string {

@@ -201,7 +201,7 @@ describe('runIngest', () => {
     const r = await runIngest(deps)
     expect(r).toEqual({
       fontesLidas: 0, fontesComErro: 0, itensVistos: 0,
-      itensNovos: 0, itensFiltrados: 0, historiasCriadas: 0,
+      itensNovos: 0, itensFiltrados: 0, historiasCriadas: 0, idsNovos: [],
     })
     db.close()
   })

@@ -4,6 +4,7 @@ import type { Contexto } from './db.js'
 import {
   gravarChave, gravarModelo, lerEstadoIA, listarModelos, providerParaIngestao,
 } from './ai.js'
+import { gravarPreferencias, lerPreferencias, notificarApos } from './notify.js'
 import { criarPlatform } from './platform.js'
 import {
   alternarFollow, alternarSalvo, buscar, gravarConfig, lerConfig, lerHistorico,
@@ -75,16 +76,32 @@ export function registrarIpc(ctx: Contexto): void {
     gravarConfig(ctx, validarTexto(k, 64), validarTexto(v, 2000))
   })
 
-  ipcMain.handle('ingest', async () => runIngest({
-    platform: criarPlatform(ctx),
-    sources: ctx.sources,
-    articles: ctx.articles,
-    stories: ctx.stories,
-    tags: ctx.tags,
-    search: ctx.search,
-    // Gemini quando há chave configurada; heurística caso contrário.
-    ai: await providerParaIngestao(ctx),
-  }))
+  ipcMain.handle('ingest', async () => {
+    const relatorio = await runIngest({
+      platform: criarPlatform(ctx),
+      sources: ctx.sources,
+      articles: ctx.articles,
+      stories: ctx.stories,
+      tags: ctx.tags,
+      search: ctx.search,
+      // Gemini quando há chave configurada; heurística caso contrário.
+      ai: await providerParaIngestao(ctx),
+    })
+    notificarApos(ctx, relatorio.idsNovos)
+    return relatorio
+  })
+
+  ipcMain.handle('notifPrefs', () => lerPreferencias(ctx))
+
+  ipcMain.handle('setNotifPrefs', (_e, prefs) => {
+    if (typeof prefs !== 'object' || prefs === null) return
+    const p = prefs as Record<string, unknown>
+    gravarPreferencias(ctx, {
+      ativadas: Boolean(p['ativadas']),
+      ultimaHora: Boolean(p['ultimaHora']),
+      topicosSeguidos: Boolean(p['topicosSeguidos']),
+    })
+  })
 
   ipcMain.handle('aiState', async () => lerEstadoIA(ctx))
 

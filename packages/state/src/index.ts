@@ -27,6 +27,7 @@ export interface IngestSummary {
   itensNovos: number
   itensFiltrados: number
   historiasCriadas: number
+  idsNovos: string[]
 }
 
 export interface TagSugerida {
@@ -45,6 +46,14 @@ export interface EstadoIA {
   requisicoesHoje: number
   tetoDiario: number
   tokensHoje: number
+}
+
+export interface PrefsNotificacao {
+  ativadas: boolean
+  ultimaHora: boolean
+  topicosSeguidos: boolean
+  maxPorDia: number
+  intervaloMinimoMs: number
 }
 
 export interface ModeloIA {
@@ -78,6 +87,8 @@ export interface DevHubApi {
   aiModels(): Promise<ModeloIA[]>
   setApiKey(chave: string): Promise<void>
   setAiModel(model: string): Promise<void>
+  notifPrefs(): Promise<PrefsNotificacao>
+  setNotifPrefs(p: Partial<PrefsNotificacao>): Promise<void>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
   openExternal(url: string): Promise<void>

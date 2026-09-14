@@ -581,3 +581,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: var(--r-pill);
   transition: width 220ms ease;
 }
+
+.interruptor {
+  width: 40px; height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-alt);
+  padding: 2px;
+  display: flex; align-items: center;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.interruptor.on { background: var(--accent); border-color: var(--accent); }
+.interruptor:disabled { opacity: 0.45; cursor: default; }
+.interruptor-bolinha {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform 140ms ease;
+}
+.interruptor.on .interruptor-bolinha { transform: translateX(18px); background: #fff; }

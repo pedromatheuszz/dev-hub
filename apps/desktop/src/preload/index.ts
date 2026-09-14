@@ -21,6 +21,11 @@ const devhub = {
   aiModels: () => ipcRenderer.invoke('aiModels'),
   setApiKey: (chave: string) => ipcRenderer.invoke('setApiKey', chave),
   setAiModel: (model: string) => ipcRenderer.invoke('setAiModel', model),
+  notifPrefs: () => ipcRenderer.invoke('notifPrefs'),
+  setNotifPrefs: (p: unknown) => ipcRenderer.invoke('setNotifPrefs', p),
+  aoAbrirArtigo: (cb: (id: string) => void) => {
+    ipcRenderer.on('abrirArtigo', (_e, id: string) => cb(id))
+  },
   getSetting: (k: string) => ipcRenderer.invoke('getSetting', k),
   setSetting: (k: string, v: string) => ipcRenderer.invoke('setSetting', k, v),
   openExternal: (url: string) => ipcRenderer.invoke('openExternal', url),

@@ -33,3 +33,5 @@ export { SOURCES } from './sources/registry.js'
 
 export * from './ingest/pipeline.js'
 export * from './ingest/schedule.js'
+
+export * from './notify/rules.js'

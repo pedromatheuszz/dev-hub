@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/splash.png",
       "backgroundColor": "#0B0D11",
       "resizeMode": "contain"
     },
@@ -15,19 +16,21 @@
       "package": "dev.devhub.app",
       "versionCode": 1,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2F6FED"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "plugins": [
       "expo-sqlite",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
         "projectId": "00000000-0000-0000-0000-000000000000"
       }
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }

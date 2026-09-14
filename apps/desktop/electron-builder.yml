@@ -1,0 +1,39 @@
+appId: dev.devhub.desktop
+electronVersion: 44.3.0
+productName: Dev Hub
+copyright: Dev Hub
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+
+# Os pacotes @devhub/* ja entram no bundle do electron-vite, entao nao
+# precisam ser copiados para node_modules do app empacotado.
+npmRebuild: false
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: build/icon.png
+  artifactName: DevHub-${version}-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Dev Hub
+  # Sem certificado de assinatura: o Windows vai mostrar o aviso do
+  # SmartScreen na primeira execucao. Assinar exige um certificado pago.
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: DevHub-${version}-portable.${ext}

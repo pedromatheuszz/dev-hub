@@ -2,6 +2,7 @@ import { useDevHub, type SourceInfo, type ThemePref } from '@devhub/state'
 import { useEffect, useState } from 'react'
 import { api, tempoRelativo } from '../api.js'
 import { AiSettings } from './AiSettings.js'
+import { NotifSettings } from './NotifSettings.js'
 
 const TEMAS: Array<[ThemePref, string]> = [
   ['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro'],
@@ -83,6 +84,8 @@ export function Settings() {
       </div>
 
       <AiSettings />
+
+      <NotifSettings />
 
       <div className="section-head">
         <h2>Fontes</h2>

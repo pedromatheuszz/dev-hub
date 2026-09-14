@@ -65,6 +65,8 @@ export interface IngestReport {
   itensNovos: number
   itensFiltrados: number
   historiasCriadas: number
+  /** Ids dos artigos criados nesta rodada — as notificações consomem isto. */
+  idsNovos: string[]
 }
 
 const POR_SLUG = new Map(TAG_DICTIONARY.map((t) => [t.slug, t]))
@@ -82,7 +84,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
 
   const rel: IngestReport = {
     fontesLidas: 0, fontesComErro: 0, itensVistos: 0,
-    itensNovos: 0, itensFiltrados: 0, historiasCriadas: 0,
+    itensNovos: 0, itensFiltrados: 0, historiasCriadas: 0, idsNovos: [],
   }
 
   const ativas = sources.listActive()
@@ -148,6 +150,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestReport> {
   // gravados como 'pending' e são reprocessados na próxima rodada.
   for (const a of novos) articles.upsert(a)
   rel.itensNovos = novos.length
+  rel.idsNovos = novos.map((a) => a.id)
 
   // ---- Etapa 7: classificação em lote ----
   const classificacoes = new Map<string, Classification>()
