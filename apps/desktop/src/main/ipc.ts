@@ -1,6 +1,9 @@
-import { HeuristicProvider, runIngest, type Category } from '@devhub/core'
+import { runIngest, type Category } from '@devhub/core'
 import { ipcMain, shell } from 'electron'
 import type { Contexto } from './db.js'
+import {
+  gravarChave, gravarModelo, lerEstadoIA, listarModelos, providerParaIngestao,
+} from './ai.js'
 import { criarPlatform } from './platform.js'
 import {
   alternarFollow, alternarSalvo, buscar, gravarConfig, lerConfig, lerHistorico,
@@ -79,8 +82,22 @@ export function registrarIpc(ctx: Contexto): void {
     stories: ctx.stories,
     tags: ctx.tags,
     search: ctx.search,
-    ai: new HeuristicProvider(),
+    // Gemini quando há chave configurada; heurística caso contrário.
+    ai: await providerParaIngestao(ctx),
   }))
+
+  ipcMain.handle('aiState', async () => lerEstadoIA(ctx))
+
+  ipcMain.handle('aiModels', async () => listarModelos(ctx))
+
+  // A chave nunca volta para o renderer: só entra. O que sai é aiState.temChave.
+  ipcMain.handle('setApiKey', async (_e, chave) => {
+    await gravarChave(ctx, validarTexto(chave, 200))
+  })
+
+  ipcMain.handle('setAiModel', (_e, model) => {
+    gravarModelo(ctx, validarTexto(model, 100))
+  })
 
   ipcMain.handle('openExternal', async (_e, url) => {
     const bruta = validarTexto(url, 2000)

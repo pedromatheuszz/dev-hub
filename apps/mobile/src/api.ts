@@ -1,9 +1,10 @@
 import {
-  HeuristicProvider, SOURCES, runIngest, type Article, type Category,
+  CHAVE_SECRETA_GEMINI, SOURCES, montarProvider, runIngest,
+  type Article, type Category,
 } from '@devhub/core'
 import {
   ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
-  historico, migrate, tagsMaisUsadas,
+  UsageRepo, historico, migrate, tagsMaisUsadas,
 } from '@devhub/db'
 import { ExpoSqliteDriver } from '@devhub/db/expo'
 import type { DevHubApi, FeedItem, SourceInfo } from '@devhub/state'
@@ -25,6 +26,35 @@ const stories = new StoriesRepo(driver)
 const tags = new TagsRepo(driver)
 const search = new SearchRepo(driver)
 const follows = new FollowsRepo(driver)
+const usage = new UsageRepo(driver)
+
+const CHAVE_MODELO = 'ai_model'
+
+function lerConfig(k: string): string | null {
+  return driver.get<{ value: string }>(
+    'SELECT value FROM settings WHERE key = ?', [k],
+  )?.value ?? null
+}
+
+function gravarConfig(k: string, v: string): void {
+  driver.run(
+    `INSERT INTO settings (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    [k, v],
+  )
+}
+
+/** Mesma fábrica do desktop: Gemini com chave, heurística sem. */
+async function providerAtual() {
+  const agora = Date.now()
+  const model = lerConfig(CHAVE_MODELO) ?? ''
+  return montarProvider(
+    mobilePlatform,
+    { model },
+    { dia: new Date(agora).toISOString().slice(0, 10), requisicoesHoje: usage.requisicoesHoje(agora) },
+    (uso) => usage.registrar('gemini', model || '?', uso, Date.now()),
+  )
+}
 
 function idsSalvos(): Set<string> {
   return new Set(
@@ -140,11 +170,45 @@ export const mobileApi: DevHubApi = {
   },
 
   async ingest() {
+    const { provider } = await providerAtual()
     return runIngest({
       platform: mobilePlatform,
       sources, articles, stories, tags, search,
-      ai: new HeuristicProvider(),
+      ai: provider,
     })
+  },
+
+  async aiState() {
+    const agora = Date.now()
+    const { governador, motivoHeuristica } = await providerAtual()
+    const uso = usage.doDia(agora)
+    return {
+      temChave: (await mobilePlatform.secrets.get(CHAVE_SECRETA_GEMINI)) !== null,
+      provider: motivoHeuristica === null ? ('gemini' as const) : ('heuristic' as const),
+      model: lerConfig(CHAVE_MODELO) ?? '',
+      motivoHeuristica,
+      requisicoesHoje: usage.requisicoesHoje(agora),
+      tetoDiario: governador?.tetoDiario ?? 0,
+      tokensHoje: uso.reduce((s, u) => s + u.tokensEntrada + u.tokensSaida, 0),
+    }
+  },
+
+  async aiModels() {
+    const { provider, motivoHeuristica } = await providerAtual()
+    if (motivoHeuristica === 'sem_chave') return []
+    return provider.listModels()
+  },
+
+  async setApiKey(chave) {
+    if (chave.trim().length === 0) {
+      await mobilePlatform.secrets.delete(CHAVE_SECRETA_GEMINI)
+      return
+    }
+    await mobilePlatform.secrets.set(CHAVE_SECRETA_GEMINI, chave.trim())
+  },
+
+  async setAiModel(model) {
+    gravarConfig(CHAVE_MODELO, model)
   },
 
   async suggestedTags(limit) {

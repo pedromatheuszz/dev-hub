@@ -17,6 +17,10 @@ const devhub = {
   toggleFollow: (kind: string, targetId: string) =>
     ipcRenderer.invoke('toggleFollow', kind, targetId),
   history: (limit: number) => ipcRenderer.invoke('history', limit),
+  aiState: () => ipcRenderer.invoke('aiState'),
+  aiModels: () => ipcRenderer.invoke('aiModels'),
+  setApiKey: (chave: string) => ipcRenderer.invoke('setApiKey', chave),
+  setAiModel: (model: string) => ipcRenderer.invoke('setAiModel', model),
   getSetting: (k: string) => ipcRenderer.invoke('getSetting', k),
   setSetting: (k: string, v: string) => ipcRenderer.invoke('setSetting', k, v),
   openExternal: (url: string) => ipcRenderer.invoke('openExternal', url),

@@ -21,6 +21,9 @@ export * from './taxonomy/classify.js'
 
 export * from './ai/provider.js'
 export { HeuristicProvider } from './ai/heuristic.js'
+export * from './ai/quota.js'
+export * from './ai/gemini.js'
+export * from './ai/factory.js'
 
 export * from './rank/freshness.js'
 export * from './rank/score.js'
@@ -29,3 +32,4 @@ export * from './rank/breaking.js'
 export { SOURCES } from './sources/registry.js'
 
 export * from './ingest/pipeline.js'
+export * from './ingest/schedule.js'

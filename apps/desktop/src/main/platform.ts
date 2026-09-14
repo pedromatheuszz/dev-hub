@@ -15,9 +15,14 @@ const http: HttpClient = {
       }
       if (req.etag) cabecalhos['if-none-match'] = req.etag
       if (req.lastModified) cabecalhos['if-modified-since'] = req.lastModified
+      if (req.body) cabecalhos['content-type'] = 'application/json'
 
       const r = await fetch(req.url, {
-        headers: cabecalhos, signal: ctrl.signal, redirect: 'follow',
+        method: req.method ?? 'GET',
+        body: req.body,
+        headers: cabecalhos,
+        signal: ctrl.signal,
+        redirect: 'follow',
       })
       const body = r.status === 304 ? '' : await r.text()
       return { status: r.status, body, headers: Object.fromEntries(r.headers) }

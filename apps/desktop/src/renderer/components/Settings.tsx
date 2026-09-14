@@ -1,6 +1,7 @@
 import { useDevHub, type SourceInfo, type ThemePref } from '@devhub/state'
 import { useEffect, useState } from 'react'
 import { api, tempoRelativo } from '../api.js'
+import { AiSettings } from './AiSettings.js'
 
 const TEMAS: Array<[ThemePref, string]> = [
   ['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro'],
@@ -81,16 +82,7 @@ export function Settings() {
         </button>
       </div>
 
-      <div className="setting-row" style={{ borderBottom: 'none' }}>
-        <div>
-          <div className="setting-label">Resumos por IA</div>
-          <div className="setting-hint">
-            Hoje o Dev Hub usa classificação e resumo heurísticos, que rodam
-            localmente e sem custo. A integração com o Gemini chega na Fase 5.
-          </div>
-        </div>
-        <span className="chip chip-type">Heurístico</span>
-      </div>
+      <AiSettings />
 
       <div className="section-head">
         <h2>Fontes</h2>

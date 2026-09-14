@@ -9,13 +9,19 @@ export interface HttpRequest {
   etag?: string | null
   lastModified?: string | null
   timeoutMs?: number
+  /** Padrão GET. A camada de IA usa POST. */
+  method?: 'GET' | 'POST'
+  /** Corpo JSON já serializado. Só faz sentido com method POST. */
+  body?: string
 }
 
 export interface HttpClient {
   /**
+   * Faz a requisição (GET por padrão, POST quando req.method pede).
+   *
    * Deve devolver status 304 com corpo vazio quando o servidor responder
-   * Not Modified — nunca lançar exceção para status HTTP. Só lança em
-   * falha de rede ou timeout.
+   * Not Modified — nunca lançar exceção para status HTTP, inclusive 4xx e
+   * 5xx, que o chamador trata. Só lança em falha de rede ou timeout.
    */
   get(req: HttpRequest): Promise<HttpResponse>
 }

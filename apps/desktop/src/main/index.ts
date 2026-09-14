@@ -116,20 +116,30 @@ function rodarSmokeTest(win: BrowserWindow): void {
 }
 
 /** Captura a janela em PNG e sai. Permite revisar a UI sem olho humano. */
-function capturarTela(win: BrowserWindow, destino: string): void {
+function capturarTela(win: BrowserWindow, destino: string, rota?: string): void {
   win.webContents.once('did-finish-load', () => {
-    // Espera o React montar e o feed carregar antes de fotografar.
-    setTimeout(() => {
-      void win.webContents.capturePage().then(async (img) => {
+    const navegar = rota
+      ? win.webContents.executeJavaScript(
+        `[...document.querySelectorAll('.nav-item .nav-text')]
+           .find((e) => e.textContent === ${JSON.stringify(rota)})
+           ?.closest('button')?.click()`,
+      )
+      : Promise.resolve()
+
+    // Navega primeiro, depois espera o React re-renderizar, só então fotografa.
+    void navegar
+      .then(() => new Promise((r) => setTimeout(r, rota ? 3000 : 2500)))
+      .then(() => win.webContents.capturePage())
+      .then(async (img) => {
         const { writeFile } = await import('node:fs/promises')
         await writeFile(destino, img.toPNG())
         console.log(`SCREENSHOT OK: ${destino}`)
         app.exit(0)
-      }).catch((e: unknown) => {
+      })
+      .catch((e: unknown) => {
         console.error('SCREENSHOT FALHOU:', e)
         app.exit(1)
       })
-    }, 2500)
   })
 }
 
@@ -142,7 +152,8 @@ app.whenReady().then(() => {
   const iShot = process.argv.indexOf('--screenshot')
   if (iShot !== -1) {
     const destino = process.argv[iShot + 1]
-    if (destino) capturarTela(win, destino)
+    const iRota = process.argv.indexOf('--rota')
+    if (destino) capturarTela(win, destino, iRota !== -1 ? process.argv[iRota + 1] : undefined)
   }
 
   app.on('activate', () => {

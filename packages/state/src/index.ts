@@ -37,6 +37,21 @@ export interface TagSugerida {
   seguindo: boolean
 }
 
+export interface EstadoIA {
+  temChave: boolean
+  provider: 'gemini' | 'heuristic'
+  model: string
+  motivoHeuristica: 'sem_chave' | 'sem_modelo' | null
+  requisicoesHoje: number
+  tetoDiario: number
+  tokensHoje: number
+}
+
+export interface ModeloIA {
+  id: string
+  name: string
+}
+
 export interface SourceInfo {
   id: string
   name: string
@@ -59,6 +74,10 @@ export interface DevHubApi {
   suggestedTags(limit: number): Promise<TagSugerida[]>
   toggleFollow(kind: 'tag' | 'category', targetId: string): Promise<boolean>
   history(limit: number): Promise<FeedItem[]>
+  aiState(): Promise<EstadoIA>
+  aiModels(): Promise<ModeloIA[]>
+  setApiKey(chave: string): Promise<void>
+  setAiModel(model: string): Promise<void>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
   openExternal(url: string): Promise<void>

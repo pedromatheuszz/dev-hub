@@ -3,7 +3,8 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import {
-  ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo, migrate,
+  ArticlesRepo, FollowsRepo, SearchRepo, SourcesRepo, StoriesRepo, TagsRepo,
+  UsageRepo, migrate,
 } from '@devhub/db'
 import { SOURCES } from '@devhub/core'
 
@@ -15,6 +16,7 @@ export interface Contexto {
   tags: TagsRepo
   search: SearchRepo
   follows: FollowsRepo
+  usage: UsageRepo
 }
 
 let ctx: Contexto | null = null
@@ -43,6 +45,7 @@ export function abrirBanco(): Contexto {
     tags: new TagsRepo(driver),
     search: new SearchRepo(driver),
     follows: new FollowsRepo(driver),
+    usage: new UsageRepo(driver),
   }
   return ctx
 }

@@ -6,6 +6,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native'
 import { hostDe, mobileApi, rotuloTipo, tempoRelativo } from './api.js'
+import { AiSettings } from './components/AiSettings.js'
 import { BottomNav } from './components/BottomNav.js'
 import { Following } from './components/Following.js'
 import { StoryCard } from './components/StoryCard.js'
@@ -219,6 +220,10 @@ export function App() {
             <Text style={{ color: p.textFaint, fontSize: fontSize.xs, marginTop: spacing.sm }}>
               Por padrão só baixa o que mudou desde a última vez.
             </Text>
+
+            <View style={{ marginTop: spacing.xxl }}>
+              <AiSettings p={p} />
+            </View>
           </ScrollView>
         ) : lista.length === 0 && !loading ? (
           <Vazio

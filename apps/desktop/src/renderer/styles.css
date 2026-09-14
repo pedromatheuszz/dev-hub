@@ -552,3 +552,32 @@ button { font: inherit; color: inherit; cursor: pointer; }
   white-space: nowrap;
 }
 .follow-chip.on .follow-acao { color: var(--accent); font-weight: 600; }
+
+/* ---------------------------------------------------------- IA / config */
+
+.campo {
+  padding: 6px var(--sp-md);
+  min-width: 230px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.campo:focus { border-color: var(--accent); outline: none; }
+
+.barra-cota {
+  height: 5px;
+  width: 100%;
+  max-width: 320px;
+  margin-top: var(--sp-sm);
+  background: var(--surface-alt);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.barra-cota-preenchida {
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition: width 220ms ease;
+}
